@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { IRefPhaserGame, PhaserGame } from './game/PhaserGame';
 import { MainMenu } from './game/scenes/MainMenu';
+import { EventBus } from './game/EventBus';
 
 function App()
 {
@@ -10,6 +11,19 @@ function App()
     //  References to the PhaserGame component (game and scene are exposed)
     const phaserRef = useRef<IRefPhaserGame | null>(null);
     const [spritePosition, setSpritePosition] = useState({ x: 0, y: 0 });
+
+    const [selectedAgent, setSelectedAgent] = useState<{name: string, health: number, speed: number} | null>(null);
+
+    const handleAgentSelected = (agent: any) => {
+        setSelectedAgent(agent);
+    };
+
+    useEffect(() => {
+        EventBus.on('agent-selected', handleAgentSelected);
+        return () => {
+            EventBus.off('agent-selected', handleAgentSelected);
+        };
+    }, []);
 
     const changeScene = () => {
 
@@ -96,6 +110,14 @@ function App()
                 <div>
                     <button className="button" onClick={addSprite}>Add New Sprite</button>
                 </div>
+                {selectedAgent && (
+                    <div className="agentInfo">
+                        <h3>Selected Agent</h3>
+                        <pre>
+                            {JSON.stringify(selectedAgent, null, 2)}
+                        </pre>
+                    </div>
+                )}
             </div>
         </div>
     )
