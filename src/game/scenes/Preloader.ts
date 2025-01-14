@@ -32,8 +32,32 @@ export class Preloader extends Scene
         //  Load the assets for the game - Replace with your own assets
         this.load.setPath('assets');
 
+        this.load.image('swarmBg2', 'swarm-bg-2.png');
+        this.load.image('swarmBg', 'swarm-bg.png');
+
+        // character assets
+        this.load.image('player1', 'characters/player1.png');
+        this.load.image('player2', 'characters/player2.png'); 
+        this.load.image('player3', 'characters/player3.png');
+        this.load.image('player4', 'characters/player4.png');
+        this.load.image('player5', 'characters/player5.png');
+        this.load.image('player6', 'characters/player6.png');
+        this.load.image('player7', 'characters/player7.png');
+        this.load.image('player8', 'characters/player8.png');
+        this.load.image('player9', 'characters/player9.png');
+        this.load.image('player10', 'characters/player10.png');
+        this.load.image('player11', 'characters/player11.png');
+
         this.load.image('logo', 'logo.png');
         this.load.image('star', 'star.png');
+
+        // Load audio tracks
+        this.load.audio('track1', 'soundtrack/track1.mp3');
+        this.load.audio('track2', 'soundtrack/track2.mp3');
+        this.load.audio('track3', 'soundtrack/track3.mp3');
+        this.load.audio('track4', 'soundtrack/track4.mp3');
+        this.load.audio('track5', 'soundtrack/track5.mp3');
+        // Add more tracks as needed
     }
 
     create ()
