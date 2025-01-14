@@ -1,0 +1,11 @@
+.agentInfo {
+    margin-top: 20px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+.agentInfo pre {
+    margin: 0;
+    white-space: pre-wrap;
+} 
