@@ -122,7 +122,7 @@ Below are the commands and diffs for each ticket, in order.
 
 ```bash
 # 1. Navigate into your cloned template directory
-cd honeycomb
+cd rumorwoods
 
 # 2. Checkout a new branch for each ticket and apply diffs
 git checkout -b feature/swarm-city-scene
