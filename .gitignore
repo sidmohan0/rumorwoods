@@ -35,3 +35,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Large media files
+/public/assets/soundtrack/*
+!/public/assets/soundtrack/.gitkeep
+/public/assets/videos/*
+!/public/assets/videos/.gitkeep
