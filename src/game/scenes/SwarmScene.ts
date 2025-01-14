@@ -4,21 +4,12 @@ import { EventBus } from '../EventBus';
 
 export class SwarmScene extends Scene
 {
-    swarmBg: GameObjects.Image;
-    title: GameObjects.Text;
+    private swarmBg: GameObjects.Image;
+    private title: GameObjects.Text;
     private soundtracks: Phaser.Sound.BaseSound[] = [];
     private currentTrackIndex: number = 0;
-    private player1: GameObjects.Image;
-    private player2: GameObjects.Image;
-    private player3: GameObjects.Image;
-    private player4: GameObjects.Image;
-    private player5: GameObjects.Image;
-    private player6: GameObjects.Image;
-    private player7: GameObjects.Image;
-    private player8: GameObjects.Image;
-    private player9: GameObjects.Image;
-    private player10: GameObjects.Image;
-    private player11: GameObjects.Image;
+    private agents: GameObjects.Sprite[] = [];
+
     constructor ()
     {
         super('SwarmScene');
@@ -27,19 +18,16 @@ export class SwarmScene extends Scene
     create ()
     {
         this.swarmBg = this.add.image(512, 384, 'swarmBg');
-        this.player1 = this.add.image(512, 384, 'player1');
-        this.player2 = this.add.image(512, 384, 'player2');
-        this.player3 = this.add.image(512, 384, 'player3');
-        this.player4 = this.add.image(512, 384, 'player4');
-        this.player5 = this.add.image(512, 384, 'player5');
-        this.player6 = this.add.image(512, 384, 'player6');
-        this.player7 = this.add.image(512, 384, 'player7');
-        this.player8 = this.add.image(512, 384, 'player8');
-        this.player9 = this.add.image(512, 384, 'player9');
-        this.player10 = this.add.image(512, 384, 'player10');
-        this.player11 = this.add.image(512, 384, 'player11');
+        this.swarmBg.setAlpha(0.3);
 
-        // this.logo = this.add.image(512, 300, 'logo').setDepth(100);
+        // Create swarm agents
+        for (let i = 0; i < 11; i++) {
+            const x = Phaser.Math.Between(100, 900);
+            const y = Phaser.Math.Between(100, 600);
+            const agent = this.add.sprite(x, y, `player${i+1}`);
+            agent.setScale(1.2);
+            this.agents.push(agent);
+        }
 
         this.title = this.add.text(512, 460, 'Swarm Scene', {
             fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
@@ -51,7 +39,7 @@ export class SwarmScene extends Scene
         const tracks = [
             'track1',
             'track2',
-            'track3',
+            'track3', 
             'track4',
             'track5'
         ];
@@ -76,10 +64,20 @@ export class SwarmScene extends Scene
         EventBus.emit('current-scene-ready', this);
     }
     
+    update(time: number, delta: number) {
+        // Random movement for each agent
+        this.agents.forEach((agent) => {
+            const moveX = Phaser.Math.Between(-1, 1);
+            const moveY = Phaser.Math.Between(-1, 1); 
+            agent.x += moveX;
+            agent.y += moveY;
+        });
+    }
+
     changeScene ()
     {
         this.scene.start('MainMenu');
-        }
+    }
 
     private playNextTrack() {
         // Stop current track if playing
