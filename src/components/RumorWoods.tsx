@@ -62,7 +62,7 @@ const LoadingScreen = () => {
 }
 
 // Character controller component
-const CharacterController = ({ speed = 0.1, showCollisions = false }) => {
+const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
   const characterRef = useRef<THREE.Group>(null)
   const modelRef = useRef<THREE.Group>(null)
   const { nodes, materials, scene } = useGLTF("/link.glb") as any
@@ -1475,37 +1475,6 @@ const RumorWoodsScene = () => {
       <PlantCharacter position={[-15, 0, 15]} rotation={-Math.PI * 0.75} scale={0.8} showCollisions={showCollisions} />
       <PlantCharacter position={[15, 0, -5]} rotation={Math.PI * 0.3} scale={0.75} showCollisions={showCollisions} />
       <PlantCharacter position={[-15, 0, -5]} rotation={-Math.PI * 0.3} scale={0.95} showCollisions={showCollisions} />
-
-      {/* Instructions for toggling collision visibility */}
-      {showCollisions && (
-        <sprite position={[0, 10, 0]} scale={[15, 2, 1]}>
-          <spriteMaterial>
-            <canvasTexture
-              attach="map"
-              args={[
-                (() => {
-                  const canvas = document.createElement("canvas");
-                  canvas.width = 512;
-                  canvas.height = 128;
-                  const context = canvas.getContext("2d");
-                  if (context) {
-                    context.fillStyle = "#000000";
-                    context.fillRect(0, 0, canvas.width, canvas.height);
-                    context.font = "bold 24px Arial";
-                    context.textAlign = "center";
-                    context.fillStyle = "#ffffff";
-                    context.fillText("Collision Boxes Visible (Press 'C' to toggle)", canvas.width / 2, canvas.height / 2);
-                    if (collisionDebug) {
-                      context.fillText(collisionDebug, canvas.width / 2, canvas.height / 2 + 30);
-                    }
-                  }
-                  return canvas;
-                })(),
-              ]}
-            />
-          </spriteMaterial>
-        </sprite>
-      )}
     </>
   )
 }
@@ -1575,6 +1544,89 @@ const CameraControls = ({ defaultDistance = 35 }) => {
 
 // Main component that wraps the scene in a Canvas
 const RumorWoods = () => {
+  // Create instructions panel with inline styles
+  useEffect(() => {
+    // Create container with inline styles for maximum compatibility
+    const instructionsPanel = document.createElement("div");
+    
+    // Use inline styles instead of classes to avoid any CSS conflicts
+    Object.assign(instructionsPanel.style, {
+      position: 'fixed',
+      bottom: '20px',
+      right: '20px',
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      color: 'white',
+      padding: '10px',
+      borderRadius: '8px',
+      maxWidth: '300px',
+      zIndex: '10000',
+      fontFamily: 'Arial, sans-serif',
+      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)'
+    });
+    
+    // Add content with inline styles
+    instructionsPanel.innerHTML = `
+      <div style="position: relative;">
+        <button id="toggle-instructions" style="position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; background-color: #555; border-radius: 50%; border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold;">−</button>
+        <div id="instructions-content">
+          <h3 style="font-size: 18px; margin-bottom: 10px; padding-right: 30px; font-weight: bold;">Controls:</h3>
+          <ul style="padding-left: 20px; margin: 0; font-size: 14px; line-height: 1.4;">
+            <li>WASD / Arrow Keys: Move character</li>
+            <li>Mouse Drag: Rotate camera</li>
+            <li>Q/E: Rotate camera left/right</li>
+            <li>Space: Attack</li>
+            <li>Shift: Run</li>
+            <li>Enter: Block with shield</li>
+            <li>C: Toggle collision boxes</li>
+            <li>D: Debug collision system</li>
+            <li>I: Toggle this help</li>
+          </ul>
+          <div style="margin-top: 10px; font-size: 12px; color: #aaa;">Press I or click − to collapse</div>
+        </div>
+        <div id="instructions-collapsed" style="display: none; padding: 5px;">
+          <span style="font-size: 14px; font-weight: bold;">Controls (click + to expand)</span>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(instructionsPanel);
+    
+    // Add toggle functionality
+    const toggleButton = document.getElementById("toggle-instructions");
+    const content = document.getElementById("instructions-content");
+    const collapsed = document.getElementById("instructions-collapsed");
+    
+    toggleButton?.addEventListener("click", () => {
+      if (content && collapsed) {
+        if (content.style.display === "none") {
+          // Expand
+          content.style.display = "block";
+          collapsed.style.display = "none";
+          if (toggleButton) toggleButton.textContent = "−";
+        } else {
+          // Collapse
+          content.style.display = "none";
+          collapsed.style.display = "block";
+          if (toggleButton) toggleButton.textContent = "+";
+        }
+      }
+    });
+    
+    // Keyboard shortcut
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'i' || e.key === 'I') {
+        toggleButton?.click();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      document.body.removeChild(instructionsPanel);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
       <Canvas
