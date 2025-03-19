@@ -95,11 +95,9 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
   const verticalVelocityRef = useRef(0)
   const isJumpingRef = useRef(false)
   const isFallingRef = useRef(false) // Track if we're falling to apply different gravity
-  const jumpCountRef = useRef(0) // Track number of jumps performed
-  const maxJumps = 5 // Maximum consecutive jumps allowed
-  const jumpHeight = 1.5 // Maximum jump height
+  const jumpHeight = 7.5 // Maximum jump height (5x the original 1.5)
   const riseGravity = 0.05 // Gravity strength when rising
-  const fallGravity = 0.042 // Gravity strength when falling (1.2x slower)
+  const fallGravity = 0.03 // Gravity strength when falling (slower to allow more "float" time)
   const groundLevel = 0 // Y position of the ground
   
   // Use refs for collision debug info to avoid re-renders
@@ -173,24 +171,25 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
       
       // Adjust parachute based on jumping state
       if (isJumpingRef.current) {
-        // Scale parachute animation based on jump count - more dramatic with higher counts
-        const jumpIntensity = 1 + (jumpCountRef.current * 0.15);
+        // Set intensity based on velocity instead of jump count
+        const jumpIntensity = 1.5; // Fixed higher intensity for more dramatic effect
+        const velocity = Math.abs(verticalVelocityRef.current);
         
         if (isFallingRef.current) {
           // When falling, expand the parachute more to show slowing effect
-          parachuteRef.current.position.y = 2.2 + Math.sin(t * 2) * 0.15 + 0.4;
-          parachuteRef.current.rotation.x = Math.sin(t * 1.5) * 0.15 * jumpIntensity;
-          parachuteRef.current.rotation.z = Math.sin(t * 1.8) * 0.15 * jumpIntensity;
-          // Scale up parachute during fall, more with each jump
-          const scaleValue = 1.15 + (jumpCountRef.current * 0.05);
+          parachuteRef.current.position.y = 2.2 + Math.sin(t * 2) * 0.2 + 0.5;
+          parachuteRef.current.rotation.x = Math.sin(t * 1.5) * 0.2 * jumpIntensity;
+          parachuteRef.current.rotation.z = Math.sin(t * 1.8) * 0.2 * jumpIntensity;
+          // Larger parachute during falling for dramatic effect
+          const scaleValue = 1.35;
           parachuteRef.current.scale.set(scaleValue, scaleValue, scaleValue);
         } else {
-          // When rising, make parachute more active but not as expanded
-          parachuteRef.current.position.y = 2.2 + Math.sin(t * 4) * 0.2 + 0.3;
-          parachuteRef.current.rotation.x = Math.sin(t * 2) * 0.1 * jumpIntensity;
-          parachuteRef.current.rotation.z = Math.sin(t * 3) * 0.1 * jumpIntensity;
-          // More compact during rising phase
-          const scaleValue = 1 - (jumpCountRef.current * 0.02);
+          // When rising, make parachute more active with fluttering animation
+          parachuteRef.current.position.y = 2.2 + Math.sin(t * 6) * 0.3 + 0.3;
+          parachuteRef.current.rotation.x = Math.sin(t * 3) * 0.15 * jumpIntensity;
+          parachuteRef.current.rotation.z = Math.sin(t * 4) * 0.15 * jumpIntensity;
+          // More compact during rising
+          const scaleValue = 0.9;
           parachuteRef.current.scale.set(scaleValue, scaleValue, scaleValue);
         }
       } else {
@@ -240,25 +239,15 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
       
       // Handle spacebar for jumping
       if (e.key === " ") {
-        // Allow jumping from ground or additional jumps in mid-air (up to maxJumps)
-        if (
-          // First jump from ground
-          (!isJumpingRef.current && characterRef.current?.position.y <= groundLevel + 0.01) || 
-          // Additional mid-air jumps
-          (isJumpingRef.current && jumpCountRef.current < maxJumps)
-        ) {
-          // Increment jump counter
-          jumpCountRef.current += 1;
-          
-          console.log(`Jump ${jumpCountRef.current} initiated`);
-          isJumpingRef.current = true;
-          isFallingRef.current = false; // Always reset to rising when jumping
-          
-          // Add upward velocity (always the same boost regardless of current state)
-          verticalVelocityRef.current = Math.sqrt(2 * riseGravity * jumpHeight);
-          
-          setKeys(prev => ({ ...prev, jump: true }));
-        }
+        // Allow jumping from anywhere, anytime - unlimited flight!
+        console.log("Jump initiated");
+        isJumpingRef.current = true;
+        isFallingRef.current = false; // Always reset to rising when jumping
+        
+        // Add upward velocity (always the same boost regardless of current state)
+        verticalVelocityRef.current = Math.sqrt(2 * riseGravity * jumpHeight);
+        
+        setKeys(prev => ({ ...prev, jump: true }));
       }
     };
 
@@ -335,8 +324,8 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
     const character = characterRef.current
     const time = clock.getElapsedTime()
 
-    // Apply gravity and vertical velocity
-    if (character.position.y > groundLevel || verticalVelocityRef.current !== 0) {
+    // Apply gravity and vertical velocity - with proper type checking
+    if ((character.position?.y ?? 0) > groundLevel || verticalVelocityRef.current !== 0) {
       // Detect transition from rising to falling
       if (verticalVelocityRef.current <= 0 && !isFallingRef.current) {
         console.log('Peak of jump reached, now falling');
@@ -353,18 +342,25 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
       }
       
       // Calculate new vertical position
-      const newY = character.position.y + verticalVelocityRef.current;
+      const currentY = character.position?.y ?? 0;
+      const newY = currentY + verticalVelocityRef.current;
       
       // Check if we've hit the ground
       if (newY <= groundLevel && verticalVelocityRef.current < 0) {
-        character.position.y = groundLevel;
+        if (character.position) {
+          character.position.y = groundLevel;
+        }
         verticalVelocityRef.current = 0;
+        
+        // Only set jumping to false, but don't prevent more jumps
         isJumpingRef.current = false;
         isFallingRef.current = false;
-        jumpCountRef.current = 0; // Reset jump counter when landing
-        console.log('Landed on ground, jump counter reset');
+        
+        console.log('Landed on ground');
       } else {
-        character.position.y = newY;
+        if (character.position) {
+          character.position.y = newY;
+        }
       }
     }
 
@@ -396,11 +392,11 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
 
     // Apply movement if keys are pressed
     if (moveX !== 0 || moveZ !== 0) {
-      // Calculate target position
+      // Calculate target position (with proper type checking)
       const targetPosition = new THREE.Vector3(
-        character.position.x + moveX,
-        character.position.y,
-        character.position.z + moveZ,
+        (character.position?.x ?? 0) + moveX,
+        character.position?.y ?? 0,
+        (character.position?.z ?? 0) + moveZ,
       );
 
       // Check if there would be a collision at the target position
@@ -413,15 +409,22 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
         console.log('Collision detected at target position:', targetPosition);
       }
 
+      // Create a safe copy of the current position
+      const currentPosition = character.position ? new THREE.Vector3(
+        character.position.x,
+        character.position.y,
+        character.position.z
+      ) : new THREE.Vector3(0, 0, 0);
+
       // Use the collision system to get a valid position
       const validPosition = collisionSystem.getValidPosition(
-        character.position,
+        currentPosition,
         targetPosition,
         characterRadius
       );
 
       // Check if we actually moved
-      const didMove = !validPosition.equals(character.position);
+      const didMove = !validPosition.equals(currentPosition);
       if (!didMove && wouldCollide) {
         console.log('Movement blocked by collision');
       }
@@ -430,7 +433,7 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
       const movementDirection = new THREE.Vector3(moveX, 0, moveZ).normalize();
       
       // Only rotate if there's actual movement
-      if (movementDirection.length() > 0) {
+      if (movementDirection.length() > 0 && character.rotation) {
         // Calculate the angle based on movement direction
         const targetRotation = Math.atan2(movementDirection.x, movementDirection.z);
         
@@ -438,8 +441,10 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
         character.rotation.y = targetRotation;
       }
 
-      // Update position with the valid position
-      character.position.copy(validPosition);
+      // Update position with the valid position if position exists
+      if (character.position) {
+        character.position.copy(validPosition);
+      }
 
       // Add a slight swaying motion when moving
       if (modelRef.current) {
@@ -470,12 +475,14 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
       Math.cos(cameraAngleRef.current) * horizontalDistance,
     )
 
-    // Always update camera position to follow character
-    camera.position.x = character.position.x + cameraOffsetRef.current.x
-    camera.position.y = character.position.y + cameraOffsetRef.current.y + 1.2 // Slightly higher vertical offset
-    camera.position.z = character.position.z + cameraOffsetRef.current.z
-    // Adjust the look target to be slightly higher as well
-    camera.lookAt(character.position.x, character.position.y + 1.2, character.position.z)
+    // Always update camera position to follow character (with proper type checking)
+    if (character.position) {
+      camera.position.x = character.position.x + cameraOffsetRef.current.x
+      camera.position.y = character.position.y + cameraOffsetRef.current.y + 1.2 // Slightly higher vertical offset
+      camera.position.z = character.position.z + cameraOffsetRef.current.z
+      // Adjust the look target to be slightly higher as well
+      camera.lookAt(character.position.x, character.position.y + 1.2, character.position.z)
+    }
 
     // No weapon animations anymore
   })
@@ -584,13 +591,13 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
               color={
                 isJumpingRef.current 
                   ? (isFallingRef.current 
-                      // Color gets brighter with each jump
-                      ? `rgb(${213 + jumpCountRef.current * 8}, 255, ${192 + jumpCountRef.current * 12})` 
-                      : `rgb(${196 + jumpCountRef.current * 8}, ${240 + jumpCountRef.current * 3}, ${168 + jumpCountRef.current * 15})`) 
+                      // Brighter color when falling
+                      ? "#e5ffc0" 
+                      : "#c4f0a8") 
                   : "#a8cf8e"
               } 
-              emissive={isJumpingRef.current && jumpCountRef.current > 2 ? "#a0ff80" : "#000000"}
-              emissiveIntensity={jumpCountRef.current * 0.1}
+              emissive={isJumpingRef.current ? "#a0ff80" : "#000000"}
+              emissiveIntensity={isJumpingRef.current ? 0.3 : 0}
               roughness={0.8} 
               side={THREE.DoubleSide} 
             />
@@ -637,21 +644,23 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
                 ))
               )}
               
-              {/* Jump counter indicator - small glowing orbs showing remaining jumps */}
-              {jumpCountRef.current > 0 && jumpCountRef.current < maxJumps && (
+              {/* Parachute energy particles - shows when actively jumping/floating */}
+              {isJumpingRef.current && (
                 <group position={[0, 0.8, 0]}>
-                  {[...Array(maxJumps - jumpCountRef.current)].map((_, i) => (
+                  {[...Array(12)].map((_, i) => (
                     <mesh key={i} position={[
-                      // Arrange in a small arc above the leaf
-                      (i - (maxJumps - jumpCountRef.current - 1) / 2) * 0.15,
-                      0.6,
-                      0
+                      // Arrange in a full circle around the leaf
+                      Math.sin(i * Math.PI / 6) * 0.7,
+                      Math.cos(i * Math.PI / 6) * 0.2 + 0.4,
+                      Math.cos(i * Math.PI / 6) * 0.7
                     ]}>
-                      <sphereGeometry args={[0.04, 8, 8]} />
+                      <sphereGeometry args={[0.05, 8, 8]} />
                       <meshStandardMaterial 
                         color="#ffffff" 
-                        emissive="#7fff7f" 
+                        emissive={isFallingRef.current ? "#ffff80" : "#80ff80"} 
                         emissiveIntensity={0.8} 
+                        transparent
+                        opacity={0.8}
                       />
                     </mesh>
                   ))}
@@ -2234,7 +2243,7 @@ const RumorWoods = () => {
             <li>Mouse Drag: Rotate camera</li>
             <li>Q/E: Rotate camera left/right</li>
             <li>Shift: Run</li>
-            <li>Space: Jump (up to 5x in a row)</li>
+            <li>Space: Jump/Fly (press repeatedly to float upward)</li>
             <li>C: Toggle collision boxes</li>
             <li>D: Debug collision system</li>
             <li>I: Toggle this help</li>
