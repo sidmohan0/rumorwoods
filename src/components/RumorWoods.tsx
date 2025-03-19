@@ -198,7 +198,7 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
         parachuteRef.current.rotation.x = Math.sin(t * 0.5) * 0.03;
         parachuteRef.current.rotation.z = Math.sin(t * 0.7) * 0.03;
         parachuteRef.current.scale.set(1, 1, 1);
-      }
+      } 
     }
   })
 
@@ -1897,12 +1897,14 @@ const Rain = ({ count = 5000, area = 100, intensity = 1.0, color = '#88ccff' }) 
           count={count}
           array={positions}
           itemSize={3}
+          args={[positions, 3]}
         />
         <bufferAttribute
           attach="attributes-speed"
           count={count}
           array={speeds}
           itemSize={1}
+          args={[speeds, 1]}
         />
       </bufferGeometry>
       <primitive attach="material" object={rainMaterial} />
