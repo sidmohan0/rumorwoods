@@ -62,7 +62,7 @@ const LoadingScreen = () => {
 }
 
 // Character controller component
-const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
+const CharacterController = ({ speed = 0.25, showCollisions = false, playerName = "Korok" }) => {
   const characterRef = useRef<THREE.Group>(null)
   const modelRef = useRef<THREE.Group>(null)
   const { nodes, materials, scene } = useGLTF("/link.glb") as any
@@ -513,7 +513,7 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
                     context.font = "bold 32px Arial"
                     context.textAlign = "center"
                     context.fillStyle = "#f5e8cb"
-                    context.fillText("Makar", canvas.width / 2, canvas.height / 2 + 12)
+                    context.fillText(playerName, canvas.width / 2, canvas.height / 2 + 12)
                   }
                   return canvas
                 })(),
@@ -545,95 +545,164 @@ const CentralTree = ({ position = [0, 0, 0], scale = 1 }: { position?: [number, 
   
   return (
     <group position={position} scale={[scale, scale, scale]}>
-      {/* Massive trunk - much lighter */}
-      <mesh castShadow position={[0, 20, 0]}>
-        <cylinderGeometry args={[8, 12, 40, 16]} />
+      {/* Massive trunk - much taller */}
+      <mesh castShadow position={[0, 40, 0]}>
+        <cylinderGeometry args={[8, 14, 80, 16]} />
         <meshStandardMaterial map={barkTexture} color="#c6a589" roughness={0.9} metalness={0.1} />
       </mesh>
       
-      {/* Root system - much lighter */}
-      {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-        <mesh
-          key={i}
-          castShadow
-          position={[
-            Math.sin((i * Math.PI) / 4) * 14,
-            1,
-            Math.cos((i * Math.PI) / 4) * 14
-          ]}
-          rotation={[0, (i * Math.PI) / 4, Math.PI / 4]}
-        >
-          <cylinderGeometry args={[2, 4, 10, 8]} />
-          <meshStandardMaterial map={barkTexture} color="#d4b49e" roughness={0.9} metalness={0.1} />
-        </mesh>
-      ))}
+      {/* No root logs, tree emerges directly from the ground */}
       
-      {/* Large bottom canopy - much lighter */}
-      <mesh castShadow position={[0, 30, 0]}>
-        <sphereGeometry args={[25, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+      {/* Middle trunk reinforcement */}
+      <mesh castShadow position={[0, 20, 0]}>
+        <cylinderGeometry args={[10, 12, 10, 16]} />
+        <meshStandardMaterial map={barkTexture} color="#c6a589" roughness={0.9} metalness={0.1} />
+      </mesh>
+      
+      {/* Large bottom canopy - much higher */}
+      <mesh castShadow position={[0, 60, 0]}> // Position raised
+        <sphereGeometry args={[35, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.5]} /> // Larger canopy
         <meshStandardMaterial map={leavesTexture} color="#c4e2a9" roughness={0.8} metalness={0.1} side={THREE.DoubleSide} />
       </mesh>
       
-      {/* Upper trunk - much lighter */}
-      <mesh castShadow position={[0, 45, 0]}>
-        <cylinderGeometry args={[5, 7, 20, 12]} />
+      {/* Upper trunk - raised and longer */}
+      <mesh castShadow position={[0, 90, 0]}> // Position raised
+        <cylinderGeometry args={[7, 10, 40, 16]} /> // Longer trunk
         <meshStandardMaterial map={barkTexture} color="#d4b49e" roughness={0.9} metalness={0.1} />
       </mesh>
       
-      {/* Upper canopy - much lighter */}
-      <mesh castShadow position={[0, 60, 0]}>
-        <sphereGeometry args={[20, 24, 24]} />
+      {/* Upper canopy - much higher and larger */}
+      <mesh castShadow position={[0, 120, 0]}> // Position raised
+        <sphereGeometry args={[30, 32, 32]} /> // Larger canopy
         <meshStandardMaterial map={leavesTexture} color="#b6dcac" roughness={0.8} metalness={0.1} />
       </mesh>
       
-      {/* Add some branch structures */}
+      {/* Additional top canopy - crown of the tree */}
+      <mesh castShadow position={[0, 140, 0]}>
+        <sphereGeometry args={[15, 24, 24]} />
+        <meshStandardMaterial map={leavesTexture} color="#d8f0c8" roughness={0.7} metalness={0.1} />
+      </mesh>
+      
+      {/* Add lower branch structures */}
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <group key={i}>
           <mesh
             castShadow
             position={[
-              Math.sin((i * Math.PI) / 3) * 12,
-              32,
-              Math.cos((i * Math.PI) / 3) * 12
+              Math.sin((i * Math.PI) / 3) * 20,
+              50,
+              Math.cos((i * Math.PI) / 3) * 20
             ]}
             rotation={[0, (i * Math.PI) / 3, Math.PI / 6]}
           >
-            <cylinderGeometry args={[1, 2, 10, 6]} />
+            <cylinderGeometry args={[1.5, 2.5, 16, 8]} />
             <meshStandardMaterial map={barkTexture} color="#d4b49e" roughness={0.9} metalness={0.1} />
           </mesh>
           <mesh
             castShadow
             position={[
-              Math.sin((i * Math.PI) / 3) * 18,
-              36,
-              Math.cos((i * Math.PI) / 3) * 18
+              Math.sin((i * Math.PI) / 3) * 30,
+              55,
+              Math.cos((i * Math.PI) / 3) * 30
             ]}
           >
-            <sphereGeometry args={[5, 16, 16]} />
+            <sphereGeometry args={[8, 20, 20]} />
             <meshStandardMaterial map={leavesTexture} color="#b6dcac" roughness={0.8} metalness={0.1} />
           </mesh>
         </group>
       ))}
       
-      {/* Physics collision for the tree trunk */}
+      {/* Add middle branch structures */}
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <group key={`mid-${i}`}>
+          <mesh
+            castShadow
+            position={[
+              Math.sin((i * Math.PI) / 3 + 0.3) * 16,
+              80,
+              Math.cos((i * Math.PI) / 3 + 0.3) * 16
+            ]}
+            rotation={[0, (i * Math.PI) / 3, Math.PI / 5]}
+          >
+            <cylinderGeometry args={[1.2, 2, 14, 7]} />
+            <meshStandardMaterial map={barkTexture} color="#d4b49e" roughness={0.9} metalness={0.1} />
+          </mesh>
+          <mesh
+            castShadow
+            position={[
+              Math.sin((i * Math.PI) / 3 + 0.3) * 25,
+              85,
+              Math.cos((i * Math.PI) / 3 + 0.3) * 25
+            ]}
+          >
+            <sphereGeometry args={[7, 18, 18]} />
+            <meshStandardMaterial map={leavesTexture} color="#b6dcac" roughness={0.8} metalness={0.1} />
+          </mesh>
+        </group>
+      ))}
+      
+      {/* Add upper branch structures */}
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <group key={`upper-${i}`}>
+          <mesh
+            castShadow
+            position={[
+              Math.sin((i * Math.PI) / 3 + 0.6) * 12,
+              110,
+              Math.cos((i * Math.PI) / 3 + 0.6) * 12
+            ]}
+            rotation={[0, (i * Math.PI) / 3, Math.PI / 4]}
+          >
+            <cylinderGeometry args={[1, 1.8, 12, 6]} />
+            <meshStandardMaterial map={barkTexture} color="#d4b49e" roughness={0.9} metalness={0.1} />
+          </mesh>
+          <mesh
+            castShadow
+            position={[
+              Math.sin((i * Math.PI) / 3 + 0.6) * 18,
+              115,
+              Math.cos((i * Math.PI) / 3 + 0.6) * 18
+            ]}
+          >
+            <sphereGeometry args={[6, 16, 16]} />
+            <meshStandardMaterial map={leavesTexture} color="#c4e2a9" roughness={0.8} metalness={0.1} />
+          </mesh>
+        </group>
+      ))}
+      
+      {/* Physics collision for the massive tree trunk */}
+      <PhysicalObject 
+        position={[0, 40, 0]} 
+        size={[20, 80, 20]} 
+        visible={false} 
+      />
+      
+      {/* Physics collision for the middle trunk */}
       <PhysicalObject 
         position={[0, 20, 0]} 
+        size={[24, 10, 24]} 
+        visible={false} 
+      />
+      
+      {/* Physics collision for the upper trunk */}
+      <PhysicalObject 
+        position={[0, 90, 0]} 
         size={[16, 40, 16]} 
         visible={false} 
       />
       
-      {/* Physics collision for the roots */}
+      {/* Main trunk base collision - narrower without roots */}
       <PhysicalObject 
         position={[0, 1, 0]} 
-        size={[28, 2, 28]} 
+        size={[15, 2, 15]} 
         visible={false} 
       />
     </group>
   )
 }
 
-// Rock Wall component for the outer boundary
-const RockWall = ({ radius = 20, height = 4, segments = 32 }) => {
+// Rock Wall component for the outer boundary - much higher
+const RockWall = ({ radius = 20, height = 120, segments = 32 }) => { // Default height increased significantly
   const rockTexture = useTexture("/placeholder.svg")
 
   return (
@@ -1415,8 +1484,147 @@ const GoronCharacter = ({ position = [0, 0, 0] as [number, number, number], rota
   );
 };
 
+// Rain particle system
+const Rain = ({ count = 5000, area = 100, intensity = 1.0, color = '#88ccff' }) => {
+  const mesh = useRef<THREE.Points>(null);
+  const positions = useMemo(() => {
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * area;
+      positions[i * 3 + 1] = Math.random() * 150; // Rain starts high up
+      positions[i * 3 + 2] = (Math.random() - 0.5) * area;
+    }
+    return positions;
+  }, [count, area]);
+  
+  const speeds = useMemo(() => {
+    const speeds = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      speeds[i] = 0.1 + Math.random() * 0.3; // Random speeds
+    }
+    return speeds;
+  }, [count]);
+  
+  // Custom shader for elongated raindrops with alpha fade
+  const rainMaterial = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      uniforms: {
+        color: { value: new THREE.Color(color) },
+        pointTexture: { value: new THREE.TextureLoader().load('/placeholder.svg') }
+      },
+      vertexShader: `
+        attribute float speed;
+        varying float vSpeed;
+        void main() {
+          vSpeed = speed;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = 2.0 * (300.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 color;
+        uniform sampler2D pointTexture;
+        varying float vSpeed;
+        void main() {
+          float opacity = 0.3 + vSpeed * 0.5;
+          gl_FragColor = vec4(color, opacity) * texture2D(pointTexture, gl_PointCoord);
+        }
+      `,
+    });
+  }, [color]);
+  
+  useFrame(() => {
+    if (mesh.current) {
+      const positions = mesh.current.geometry.attributes.position.array as Float32Array;
+      const speeds = mesh.current.geometry.attributes.speed.array as Float32Array;
+      
+      for (let i = 0; i < count; i++) {
+        positions[i * 3 + 1] -= speeds[i] * intensity;
+        // Reset raindrops that go below the ground
+        if (positions[i * 3 + 1] < -1) {
+          positions[i * 3 + 1] = 150;
+          positions[i * 3] = (Math.random() - 0.5) * area;
+          positions[i * 3 + 2] = (Math.random() - 0.5) * area;
+        }
+      }
+      
+      mesh.current.geometry.attributes.position.needsUpdate = true;
+    }
+  });
+  
+  return (
+    <points ref={mesh}>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          count={count}
+          array={positions}
+          itemSize={3}
+        />
+        <bufferAttribute
+          attach="attributes-speed"
+          count={count}
+          array={speeds}
+          itemSize={1}
+        />
+      </bufferGeometry>
+      <primitive attach="material" object={rainMaterial} />
+    </points>
+  );
+};
+
+// Mist component
+const Mist = ({ count = 20, color = '#d8f0e0' }) => {
+  const group = useRef<THREE.Group>(null);
+  const mistParts = useMemo(() => {
+    return Array.from({ length: count }).map((_, i) => ({
+      position: [
+        (Math.random() - 0.5) * 100,
+        Math.random() * 20 + 1, // Low hanging mist
+        (Math.random() - 0.5) * 100
+      ] as [number, number, number],
+      scale: Math.random() * 20 + 15,
+      rotation: Math.random() * Math.PI * 2,
+      speed: Math.random() * 0.001 + 0.0005,
+    }));
+  }, [count]);
+  
+  useFrame(({ clock }) => {
+    if (group.current) {
+      const time = clock.getElapsedTime();
+      group.current.children.forEach((child, i) => {
+        const mistPart = mistParts[i];
+        // Gentle floating motion
+        child.position.y = mistPart.position[1] + Math.sin(time * 0.2 + i) * 0.5;
+        // Slow rotation
+        child.rotation.z = mistPart.rotation + time * mistPart.speed;
+      });
+    }
+  });
+  
+  return (
+    <group ref={group}>
+      {mistParts.map((props, i) => (
+        <mesh key={i} position={props.position} rotation={[Math.PI / 2, 0, props.rotation]}>
+          <planeGeometry args={[props.scale, props.scale]} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={0.15 + Math.random() * 0.1}
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
 // Main scene component
-const RumorWoodsScene = () => {
+const RumorWoodsScene = ({ playerName = "Korok" }: { playerName?: string }) => {
   const collisionSystem = useCollisionSystem()
   const mapRadius = 56 // Increased map radius by 40% (40 * 1.4 = 56)
   const [showCollisions, setShowCollisions] = useState(false); // State for toggling collision visibility
@@ -1456,9 +1664,17 @@ const RumorWoodsScene = () => {
 
   return (
     <>
-      <ambientLight intensity={0.7} />
-      <directionalLight position={[20, 80, 20]} intensity={1.2} castShadow />
-      <pointLight position={[0, 40, 0]} intensity={0.8} color="#e0f7d1" distance={70} />
+      {/* Dimmer lighting for rainy atmosphere */}
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[20, 150, 20]} intensity={0.8} castShadow color="#aabbcc" /> {/* Blueish tint for rain */}
+      
+      {/* Tree lighting */}
+      <pointLight position={[0, 40, 0]} intensity={0.7} color="#c8e8d4" distance={70} />
+      <pointLight position={[0, 90, 0]} intensity={0.6} color="#c8e8d4" distance={70} /> {/* Middle tree light */}
+      <pointLight position={[0, 140, 0]} intensity={0.5} color="#c8e8d4" distance={60} /> {/* Top tree light */}
+      
+      {/* Additional atmospheric lighting */}
+      <fog attach="fog" args={['#aabbcc', 10, 150]} /> {/* Add fog for rainy feel */}
       {/* Base terrain - forest floor */}
       <Ground scale={1} />
       
@@ -1508,7 +1724,7 @@ const RumorWoodsScene = () => {
         width={3}
       />
       
-      {/* Fairies for ambient lighting/atmosphere around the tree */}
+      {/* Fairies for ambient lighting/atmosphere around the tree - now reaching much higher */}
       <Fairy position={[0, 15, 0]} />
       <Fairy position={[10, 25, 10]} />
       <Fairy position={[-10, 20, -10]} />
@@ -1517,6 +1733,22 @@ const RumorWoodsScene = () => {
       <Fairy position={[0, 40, 0]} />
       <Fairy position={[5, 50, 5]} />
       <Fairy position={[-5, 45, -5]} />
+      
+      {/* Higher fairies around the massive tree */}
+      <Fairy position={[0, 70, 0]} />
+      <Fairy position={[8, 75, 8]} />
+      <Fairy position={[-8, 80, -8]} />
+      <Fairy position={[10, 85, -10]} />
+      <Fairy position={[-10, 90, 10]} />
+      <Fairy position={[0, 95, 0]} />
+      
+      {/* Top canopy fairies */}
+      <Fairy position={[5, 110, 5]} />
+      <Fairy position={[-5, 115, -5]} />
+      <Fairy position={[0, 120, 0]} />
+      <Fairy position={[3, 130, 3]} />
+      <Fairy position={[-3, 135, -3]} />
+      <Fairy position={[0, 140, 0]} />
       
       {/* Forest floor fairies - path to the tree */}
       <Fairy position={[0, 1, -35]} />
@@ -1530,12 +1762,22 @@ const RumorWoodsScene = () => {
       <Fairy position={[30, 2, -30]} />
       <Fairy position={[-30, 1.5, 30]} />
       
-      {/* Boundary walls */}
-      <RockWall radius={mapRadius} height={6} />
+      {/* Boundary walls - much higher */}
+      <RockWall radius={mapRadius} height={120} />
       {/* Character */}
-      <CharacterController showCollisions={showCollisions} />
-      {/* Add visible boundary for debugging */}
-      <MapBoundary radius={mapRadius} visible={showCollisions} />
+      <CharacterController playerName={playerName} showCollisions={showCollisions} />
+      {/* Add visible boundary for debugging - much higher */}
+      <MapBoundary radius={mapRadius} height={120} visible={showCollisions} />
+      
+      {/* Add rain effect */}
+      <Rain count={7000} area={110} intensity={1.2} color="#aaddff" />
+      
+      {/* Add mist effect */}
+      <Mist count={30} color="#d8f0e0" />
+      
+      {/* Additional mist around tree base */}
+      <Mist count={15} color="#e8f8f0" />
+      
       {/* Example usage of PhysicalObject */}
       <PhysicalObject 
         position={[10, 1, 5]} 
@@ -1611,6 +1853,17 @@ const CameraControls = ({ defaultDistance = 35 }) => {
 
 // Main component that wraps the scene in a Canvas
 const RumorWoods = () => {
+  const [playerName, setPlayerName] = useState("Korok")
+  const [showNameModal, setShowNameModal] = useState(true)
+  const [gameStarted, setGameStarted] = useState(false)
+  
+  // Handle name submission
+  const handleNameSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setShowNameModal(false)
+    setGameStarted(true)
+  }
+  
   // Create instructions panel with inline styles
   useEffect(() => {
     // Create container with inline styles for maximum compatibility
@@ -1694,18 +1947,117 @@ const RumorWoods = () => {
 
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
+      {showNameModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          zIndex: 1000,
+          backdropFilter: 'blur(8px)',
+        }}>
+          <div style={{
+            backgroundColor: '#a8cf8e',
+            padding: '30px',
+            borderRadius: '15px',
+            boxShadow: '0 5px 25px rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            maxWidth: '400px',
+            border: '3px solid #8a5a3c',
+          }}>
+            <h2 style={{
+              color: '#5d4037',
+              marginTop: 0,
+              marginBottom: '20px',
+              fontFamily: 'Arial, sans-serif',
+              fontSize: '28px',
+              textAlign: 'center',
+            }}>
+              Welcome to Rumor Woods!
+            </h2>
+            <p style={{
+              color: '#5d4037',
+              marginBottom: '20px',
+              fontFamily: 'Arial, sans-serif',
+              fontSize: '16px',
+              textAlign: 'center',
+              lineHeight: '1.5',
+            }}>
+              You'll be playing as a little Korok forest spirit exploring a magical realm.
+              <br />
+              Please enter your name:
+            </p>
+            <form onSubmit={handleNameSubmit} style={{ width: '100%' }}>
+              <input
+                type="text"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  marginBottom: '20px',
+                  boxSizing: 'border-box',
+                  border: '2px solid #8a5a3c',
+                  borderRadius: '5px',
+                  fontSize: '16px',
+                  backgroundColor: '#f5e8cb',
+                  color: '#5d4037',
+                }}
+                autoFocus
+                maxLength={20}
+              />
+              <button
+                type="submit"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#8a5a3c',
+                  color: '#f5e8cb',
+                  border: 'none',
+                  borderRadius: '5px',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#6d4c33'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#8a5a3c'}
+              >
+                Start Adventure
+              </button>
+            </form>
+            <div style={{
+              marginTop: '20px',
+              fontSize: '14px',
+              color: '#5d4037',
+              fontStyle: 'italic',
+              textAlign: 'center',
+            }}>
+              Use WASD to move and Mouse to look around!
+            </div>
+          </div>
+        </div>
+      )}
+      
       <Canvas
         shadows
         camera={{
-          position: [0, 15, -55],
-          fov: 60,
+          position: [0, 25, -65], // Higher and further back to see more height
+          fov: 70, // Wider field of view
           near: 0.1,
-          far: 1000,
+          far: 1500, // Increased for visibility of distant elements
         }}
       >
         <Suspense fallback={null}>
-          <RumorWoodsScene />
-          <Sky distance={450000} sunPosition={[0.5, 0.7, 0.5]} rayleigh={1} turbidity={5} />
+          <RumorWoodsScene playerName={playerName} />
+          <Sky distance={450000} sunPosition={[0.2, 0.3, 0.8]} rayleigh={3} turbidity={10} /> {/* Overcast/rainy sky */}
           <CameraControls defaultDistance={45} />
         </Suspense>
         <Stats />

@@ -322,14 +322,14 @@ export const WaterCollision = ({
 };
 
 // Optional: Add a visible boundary component for debugging
-export const MapBoundary = ({ radius = 20, visible = false }) => {
+export const MapBoundary = ({ radius = 20, height = 4, visible = false }) => {
   const segments = 64;
   const meshRef = useRef<THREE.Mesh>(null);
   
   return (
-    <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} visible={visible}>
-      <ringGeometry args={[radius - 0.1, radius, segments]} />
-      <meshBasicMaterial color="red" wireframe transparent opacity={0.3} />
+    <mesh ref={meshRef} position={[0, height / 2, 0]} visible={visible}>
+      <cylinderGeometry args={[radius, radius, height, segments, 1, true]} />
+      <meshBasicMaterial color="red" wireframe transparent opacity={0.3} side={THREE.BackSide} />
     </mesh>
   );
 };
