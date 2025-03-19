@@ -73,7 +73,6 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
     right: false,
     rotateLeft: false,
     rotateRight: false,
-    attack: false,
   })
   const { camera } = useThree()
   const cameraOffsetRef = useRef(new THREE.Vector3(0, 3.5, 7))
@@ -82,17 +81,13 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
   const rotationSpeed = 0.03 // Camera rotation speed
   const collisionSystem = useCollisionSystem()
   const [isRunning, setIsRunning] = useState(false)
-  const [isAttacking, setIsAttacking] = useState(false)
   const [animationFrame, setAnimationFrame] = useState(0)
-  const [attackFrame, setAttackFrame] = useState(0)
   const animationTimer = useRef<number | null>(null)
-  const attackTimer = useRef<number | null>(null)
-  const characterRadius = 1.0 // Increased from 0.5 to 1.0 for better collision detection
+  const characterRadius = 0.8 // Adjusted to fit Korok size
   const [isDragging, setIsDragging] = useState(false)
   const lastMousePosition = useRef({ x: 0, y: 0 })
   const [modelLoaded, setModelLoaded] = useState(false)
   const [modelError, setModelError] = useState<string | null>(null)
-  const [isBlocking, setIsBlocking] = useState(false)
   
   // Use refs for collision debug info to avoid re-renders
   const lastCollisionRef = useRef<string | null>(null)
@@ -135,7 +130,7 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
     }
   }, [characterRadius, showCollisions]);
 
-  // Animation frames
+  // Animation frames for running and parachute bobbing
   useEffect(() => {
     if (isRunning) {
       animationTimer.current = window.setInterval(() => {
@@ -155,32 +150,24 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
       }
     }
   }, [isRunning])
-
-  // Attack animation
-  useEffect(() => {
-    if (isAttacking) {
-      // Start attack animation
-      setAttackFrame(0)
-      attackTimer.current = window.setInterval(() => {
-        setAttackFrame((prev) => {
-          if (prev >= 5) {
-            // End attack animation after 6 frames
-            clearInterval(attackTimer.current!)
-            attackTimer.current = null
-            setIsAttacking(false)
-            return 0
-          }
-          return prev + 1
-        })
-      }, 100) // Faster animation for attack
+  
+  // Add gentle bobbing animation to the parachute
+  const parachuteRef = useRef<THREE.Group>(null)
+  
+  useFrame(({ clock }) => {
+    if (parachuteRef.current) {
+      const t = clock.getElapsedTime()
+      
+      // Gentle vertical bobbing
+      parachuteRef.current.position.y = Math.sin(t * 0.8) * 0.1 + 2.2
+      
+      // Subtle rotation
+      parachuteRef.current.rotation.x = Math.sin(t * 0.5) * 0.03
+      parachuteRef.current.rotation.z = Math.sin(t * 0.7) * 0.03
     }
+  })
 
-    return () => {
-      if (attackTimer.current) {
-        clearInterval(attackTimer.current)
-      }
-    }
-  }, [isAttacking])
+  // No attack animation anymore
 
   // Set up key listeners
   useEffect(() => {
@@ -201,8 +188,7 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
       'q': 'rotateLeft',
       'Q': 'rotateLeft',
       'e': 'rotateRight',
-      'E': 'rotateRight',
-      ' ': 'attack'
+      'E': 'rotateRight'
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -210,19 +196,11 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
       const action = keyMap[e.key];
       if (action) {
         console.log(`Key down: ${e.key} -> ${action}`);
-        
-        // Handle attack separately due to the isAttacking state
-        if (action === 'attack' && !isAttacking) {
-          setKeys(prev => ({ ...prev, [action]: true }));
-          setIsAttacking(true);
-        } else if (action !== 'attack') {
-          setKeys(prev => ({ ...prev, [action]: true }));
-        }
+        setKeys(prev => ({ ...prev, [action]: true }));
       }
       
       // Handle other keys
       if (e.key === "Shift") setIsRunning(true);
-      if (e.key === "Enter") setIsBlocking(true);
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -235,7 +213,6 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
       
       // Handle other keys
       if (e.key === "Shift") setIsRunning(false);
-      if (e.key === "Enter") setIsBlocking(false);
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -245,7 +222,7 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [isAttacking, keys]);
+  }, [keys]); // Remove isAttacking from dependency array
 
   // Set up mouse listeners for camera control
   useEffect(() => {
@@ -319,8 +296,8 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
     moveX = rotatedInputX * currentSpeed;
     moveZ = rotatedInputZ * currentSpeed;
 
-    // Apply movement if keys are pressed and not attacking
-    if ((moveX !== 0 || moveZ !== 0) && !isAttacking) {
+    // Apply movement if keys are pressed
+    if (moveX !== 0 || moveZ !== 0) {
       // Calculate target position
       const targetPosition = new THREE.Vector3(
         character.position.x + moveX,
@@ -371,12 +348,10 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
         modelRef.current.rotation.z = Math.sin(time * 5) * 0.05;
       }
     } else {
-      if (!isAttacking) {
-        setIsRunning(false);
-        // Reset the swaying when not moving
-        if (modelRef.current) {
-          modelRef.current.rotation.z = 0;
-        }
+      setIsRunning(false);
+      // Reset the swaying when not moving
+      if (modelRef.current) {
+        modelRef.current.rotation.z = 0;
       }
     }
 
@@ -402,23 +377,10 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
     camera.position.z = character.position.z + cameraOffsetRef.current.z
     camera.lookAt(character.position.x, character.position.y + 1, character.position.z)
 
-    // Update sword animation if attacking
-    if (isAttacking && modelRef.current) {
-      // You would animate the sword here if the model has a sword
-      // This depends on the structure of your GLB model
-    }
+    // No weapon animations anymore
   })
 
-  // Calculate sword rotation based on attack animation
-  const swordRotation = useMemo(() => {
-    if (!isAttacking) return [0, 0, 0]
-
-    // Sword slashing animation
-    const progress = attackFrame / 5
-    const swingAngle = Math.sin(progress * Math.PI) * Math.PI * 0.75
-
-    return [swingAngle, 0, 0]
-  }, [isAttacking, attackFrame])
+  // No weapon rotation needed
 
   return (
     <group ref={characterRef} position={[0, 0, -45]} rotation={[0, 0, 0]}>
@@ -459,93 +421,83 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
         </>
       )}
       <group ref={modelRef} scale={[1, 1, 1]} position={[0, 0, 0]}>
-        {/* Body */}
-        <mesh castShadow position={[0, 1, 0]}>
-          <boxGeometry args={[0.8, 1.5, 0.5]} />
-          <meshStandardMaterial color="#4CAF50" />
+        {/* Korok Body - small stumpy body */}
+        <mesh castShadow position={[0, 0.5, 0]}>
+          <cylinderGeometry args={[0.4, 0.6, 1, 8]} />
+          <meshStandardMaterial color="#8a5a3c" roughness={0.9} />
         </mesh>
 
-        {/* Head */}
-        <mesh castShadow position={[0, 2.1, 0]}>
-          <sphereGeometry args={[0.5, 16, 16]} />
-          <meshStandardMaterial color="#ffdbac" />
+        {/* Korok Face - mask-like face */}
+        <mesh castShadow position={[0, 1.1, 0.2]}>
+          <sphereGeometry args={[0.4, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
+          <meshStandardMaterial color="#f5e8cb" roughness={0.7} />
         </mesh>
 
-        {/* Hat */}
-        <mesh castShadow position={[0, 2.5, 0]}>
-          <coneGeometry args={[0.5, 0.8, 16]} />
-          <meshStandardMaterial color="#4CAF50" />
+        {/* Korok Eyes */}
+        <mesh position={[0.15, 1.1, 0.45]}>
+          <sphereGeometry args={[0.08, 8, 8]} />
+          <meshBasicMaterial color="#000000" />
+        </mesh>
+        <mesh position={[-0.15, 1.1, 0.45]}>
+          <sphereGeometry args={[0.08, 8, 8]} />
+          <meshBasicMaterial color="#000000" />
         </mesh>
 
-        {/* Arms */}
-        <mesh castShadow position={[0.6, 1, 0]}>
-          <boxGeometry args={[0.3, 1.2, 0.3]} />
-          <meshStandardMaterial color="#4CAF50" />
-        </mesh>
-        <mesh castShadow position={[-0.6, 1, 0]}>
-          <boxGeometry args={[0.3, 1.2, 0.3]} />
-          <meshStandardMaterial color="#4CAF50" />
+        {/* Korok Mouth */}
+        <mesh position={[0, 0.95, 0.45]}>
+          <boxGeometry args={[0.1, 0.05, 0.01]} />
+          <meshBasicMaterial color="#000000" />
         </mesh>
 
-        {/* Legs */}
-        <mesh castShadow position={[0.25, -0.2, 0]}>
-          <boxGeometry args={[0.3, 1, 0.3]} />
-          <meshStandardMaterial color="#8B4513" />
-        </mesh>
-        <mesh castShadow position={[-0.25, -0.2, 0]}>
-          <boxGeometry args={[0.3, 1, 0.3]} />
-          <meshStandardMaterial color="#8B4513" />
+        {/* Small leaf on head */}
+        <mesh castShadow position={[0, 1.6, 0]} rotation={[0.2, 0, 0]} scale={[0.7, 0.7, 0.7]}>
+          <coneGeometry args={[0.3, 0.6, 5]} />
+          <meshStandardMaterial color="#a8cf8e" roughness={0.8} side={THREE.DoubleSide} />
         </mesh>
 
-        {/* Sword (always visible but animated when attacking) */}
-        <mesh
-          castShadow
-          position={[0.8, 1.2, 0.3]}
-          rotation={isAttacking ? [swordRotation[0], swordRotation[1], swordRotation[2]] : [0, 0, 0]}
-        >
-          <boxGeometry args={[0.1, 1, 0.1]} />
-          <meshStandardMaterial color="#C0C0C0" metalness={0.8} roughness={0.2} />
+        {/* Korok Arms - raised to hold the parachute leaf */}
+        <mesh castShadow position={[0.3, 0.8, 0]} rotation={[0, 0, Math.PI * 0.5]}>
+          <cylinderGeometry args={[0.07, 0.05, 0.5, 6]} />
+          <meshStandardMaterial color="#8a5a3c" roughness={0.9} />
+        </mesh>
+        <mesh castShadow position={[-0.3, 0.8, 0]} rotation={[0, 0, -Math.PI * 0.5]}>
+          <cylinderGeometry args={[0.07, 0.05, 0.5, 6]} />
+          <meshStandardMaterial color="#8a5a3c" roughness={0.9} />
         </mesh>
 
-        {/* Sword handle */}
-        <mesh
-          castShadow
-          position={[0.8, 0.7, 0.3]}
-          rotation={isAttacking ? [swordRotation[0], swordRotation[1], swordRotation[2]] : [0, 0, 0]}
-        >
-          <boxGeometry args={[0.15, 0.3, 0.15]} />
-          <meshStandardMaterial color="#8B4513" />
+        {/* Korok Legs - tiny stumpy legs */}
+        <mesh castShadow position={[0.2, 0, 0]}>
+          <cylinderGeometry args={[0.07, 0.1, 0.3, 6]} />
+          <meshStandardMaterial color="#8a5a3c" roughness={0.9} />
         </mesh>
-
-        {/* Shield (with mirror-like material) */}
-        <mesh castShadow position={[-0.8, 1.2, isBlocking ? 0.5 : 0.3]} rotation={[0, isBlocking ? Math.PI / 6 : 0, 0]}>
-          <boxGeometry args={[0.1, 0.8, 0.6]} />
-          <meshStandardMaterial color="#4169E1" metalness={0.9} roughness={0.1} envMapIntensity={1} />
+        <mesh castShadow position={[-0.2, 0, 0]}>
+          <cylinderGeometry args={[0.07, 0.1, 0.3, 6]} />
+          <meshStandardMaterial color="#8a5a3c" roughness={0.9} />
         </mesh>
+        
+        {/* Parachute Leaf - large leaf held above head */}
+        <group ref={parachuteRef} position={[0, 2.2, 0]}>
+          {/* Main leaf - concave shape */}
+          <mesh castShadow position={[0, 0, 0]}>
+            <sphereGeometry args={[0.8, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+            <meshStandardMaterial color="#a8cf8e" roughness={0.8} side={THREE.DoubleSide} />
+          </mesh>
+          
+          {/* Leaf underside details - veins */}
+          <mesh castShadow position={[0, -0.05, 0]}>
+            <sphereGeometry args={[0.75, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.4]} />
+            <meshStandardMaterial color="#b6dcac" roughness={0.8} transparent opacity={0.6} side={THREE.DoubleSide} />
+          </mesh>
+          
+          {/* Leaf stem */}
+          <mesh castShadow position={[0, 0.2, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 0.4, 6]} />
+            <meshStandardMaterial color="#8a5a3c" roughness={0.9} />
+          </mesh>
+        </group>
 
-        {/* Shield border */}
-        <mesh
-          castShadow
-          position={[-0.8, 1.2, isBlocking ? 0.5 : 0.3]}
-          rotation={[0, isBlocking ? Math.PI / 6 : 0, 0]}
-          scale={[1.1, 1.1, 1.05]}
-        >
-          <boxGeometry args={[0.1, 0.8, 0.6]} />
-          <meshStandardMaterial color="#FFD700" />
-        </mesh>
-
-        {/* Shield mirror surface */}
-        <mesh
-          castShadow
-          position={[-0.8, 1.2, isBlocking ? 0.55 : 0.35]}
-          rotation={[0, isBlocking ? Math.PI / 6 : 0, 0]}
-        >
-          <planeGeometry args={[0.7, 0.7]} />
-          <meshStandardMaterial color="#C0C0C0" metalness={1} roughness={0} envMapIntensity={1.5} />
-        </mesh>
-
-        {/* Name Tag */}
-        <sprite position={[0, 3, 0]} scale={[4, 1, 1]}>
+        {/* Korok Name Tag */}
+        <sprite position={[0, 3.2, 0]} scale={[3, 0.8, 1]}>
           <spriteMaterial>
             <canvasTexture
               attach="map"
@@ -556,12 +508,12 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
                   canvas.height = 64
                   const context = canvas.getContext("2d")
                   if (context) {
-                    context.fillStyle = "#000000"
+                    context.fillStyle = "rgba(0, 0, 0, 0.5)"
                     context.fillRect(0, 0, canvas.width, canvas.height)
-                    context.font = "bold 36px Arial"
+                    context.font = "bold 32px Arial"
                     context.textAlign = "center"
-                    context.fillStyle = "#ffffff"
-                    context.fillText("Player1", canvas.width / 2, canvas.height / 2 + 12)
+                    context.fillStyle = "#f5e8cb"
+                    context.fillText("Makar", canvas.width / 2, canvas.height / 2 + 12)
                   }
                   return canvas
                 })(),
@@ -1686,12 +1638,10 @@ const RumorWoods = () => {
         <div id="instructions-content">
           <h3 style="font-size: 18px; margin-bottom: 10px; padding-right: 30px; font-weight: bold;">Controls:</h3>
           <ul style="padding-left: 20px; margin: 0; font-size: 14px; line-height: 1.4;">
-            <li>WASD / Arrow Keys: Move character</li>
+            <li>WASD / Arrow Keys: Move Korok</li>
             <li>Mouse Drag: Rotate camera</li>
             <li>Q/E: Rotate camera left/right</li>
-            <li>Space: Attack</li>
             <li>Shift: Run</li>
-            <li>Enter: Block with shield</li>
             <li>C: Toggle collision boxes</li>
             <li>D: Debug collision system</li>
             <li>I: Toggle this help</li>
