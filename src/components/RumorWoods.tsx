@@ -123,7 +123,7 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
       
       // Add a collision object for the character (for debugging only)
       if (showCollisions) {
-        const characterPos = new THREE.Vector3(0, 0, -25); // Initial position
+        const characterPos = new THREE.Vector3(0, 0, -45); // Initial position (far from central tree, facing it)
         const collisionObj = {
           position: characterPos,
           radius: characterRadius
@@ -421,7 +421,7 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
   }, [isAttacking, attackFrame])
 
   return (
-    <group ref={characterRef} position={[0, 0, 0]} rotation={[0, Math.PI, 0]}>
+    <group ref={characterRef} position={[0, 0, -45]} rotation={[0, 0, 0]}>
       {/* Add collision debug sphere */}
       {showCollisions && (
         <>
@@ -574,15 +574,109 @@ const CharacterController = ({ speed = 0.25, showCollisions = false }) => {
   )
 }
 
-// Ground component with texture
+// Ground component with forest floor texture - much lighter shade
 const Ground = ({ scale = 1 }: { scale?: number }) => {
-  const grassTexture = useTexture("/placeholder.svg")
+  const forestTexture = useTexture("/placeholder.svg")
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow position={[0, -0.5, 0]} scale={scale}>
-      <planeGeometry args={[50, 50, 32, 32]} />
-      <meshStandardMaterial map={grassTexture} color="#2e8b57" roughness={0.8} metalness={0.1} />
+      <planeGeometry args={[120, 120, 64, 64]} />
+      <meshStandardMaterial map={forestTexture} color="#a8cf8e" roughness={0.8} metalness={0.05} />
     </mesh>
+  )
+}
+
+// Great Central Tree component
+const CentralTree = ({ position = [0, 0, 0], scale = 1 }: { position?: [number, number, number]; scale?: number }) => {
+  const barkTexture = useTexture("/placeholder.svg")
+  const leavesTexture = useTexture("/placeholder.svg")
+  
+  return (
+    <group position={position} scale={[scale, scale, scale]}>
+      {/* Massive trunk - much lighter */}
+      <mesh castShadow position={[0, 20, 0]}>
+        <cylinderGeometry args={[8, 12, 40, 16]} />
+        <meshStandardMaterial map={barkTexture} color="#c6a589" roughness={0.9} metalness={0.1} />
+      </mesh>
+      
+      {/* Root system - much lighter */}
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+        <mesh
+          key={i}
+          castShadow
+          position={[
+            Math.sin((i * Math.PI) / 4) * 14,
+            1,
+            Math.cos((i * Math.PI) / 4) * 14
+          ]}
+          rotation={[0, (i * Math.PI) / 4, Math.PI / 4]}
+        >
+          <cylinderGeometry args={[2, 4, 10, 8]} />
+          <meshStandardMaterial map={barkTexture} color="#d4b49e" roughness={0.9} metalness={0.1} />
+        </mesh>
+      ))}
+      
+      {/* Large bottom canopy - much lighter */}
+      <mesh castShadow position={[0, 30, 0]}>
+        <sphereGeometry args={[25, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+        <meshStandardMaterial map={leavesTexture} color="#c4e2a9" roughness={0.8} metalness={0.1} side={THREE.DoubleSide} />
+      </mesh>
+      
+      {/* Upper trunk - much lighter */}
+      <mesh castShadow position={[0, 45, 0]}>
+        <cylinderGeometry args={[5, 7, 20, 12]} />
+        <meshStandardMaterial map={barkTexture} color="#d4b49e" roughness={0.9} metalness={0.1} />
+      </mesh>
+      
+      {/* Upper canopy - much lighter */}
+      <mesh castShadow position={[0, 60, 0]}>
+        <sphereGeometry args={[20, 24, 24]} />
+        <meshStandardMaterial map={leavesTexture} color="#b6dcac" roughness={0.8} metalness={0.1} />
+      </mesh>
+      
+      {/* Add some branch structures */}
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <group key={i}>
+          <mesh
+            castShadow
+            position={[
+              Math.sin((i * Math.PI) / 3) * 12,
+              32,
+              Math.cos((i * Math.PI) / 3) * 12
+            ]}
+            rotation={[0, (i * Math.PI) / 3, Math.PI / 6]}
+          >
+            <cylinderGeometry args={[1, 2, 10, 6]} />
+            <meshStandardMaterial map={barkTexture} color="#d4b49e" roughness={0.9} metalness={0.1} />
+          </mesh>
+          <mesh
+            castShadow
+            position={[
+              Math.sin((i * Math.PI) / 3) * 18,
+              36,
+              Math.cos((i * Math.PI) / 3) * 18
+            ]}
+          >
+            <sphereGeometry args={[5, 16, 16]} />
+            <meshStandardMaterial map={leavesTexture} color="#b6dcac" roughness={0.8} metalness={0.1} />
+          </mesh>
+        </group>
+      ))}
+      
+      {/* Physics collision for the tree trunk */}
+      <PhysicalObject 
+        position={[0, 20, 0]} 
+        size={[16, 40, 16]} 
+        visible={false} 
+      />
+      
+      {/* Physics collision for the roots */}
+      <PhysicalObject 
+        position={[0, 1, 0]} 
+        size={[28, 2, 28]} 
+        visible={false} 
+      />
+    </group>
   )
 }
 
@@ -598,11 +692,11 @@ const RockWall = ({ radius = 20, height = 4, segments = 32 }) => {
   )
 }
 
-// Path component for the sandy paths
+// Path component for the sandy paths - lighter color
 const Path = ({
   points,
   width = 2,
-  color = "#d2b48c",
+  color = "#f5e8cb",
 }: {
   points: [number, number][]
   width?: number
@@ -807,14 +901,14 @@ const StoneSteps = ({
   )
 }
 
-// Grass Patch component
+// Grass Patch component - with lighter color
 const GrassPatch = ({ position, size }: { position: [number, number, number]; size: number }) => {
   const grassTexture = useTexture("/placeholder.svg")
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={position} receiveShadow>
       <circleGeometry args={[size, 32]} />
-      <meshStandardMaterial map={grassTexture} color="#7cfc00" roughness={0.8} metalness={0} />
+      <meshStandardMaterial map={grassTexture} color="#d5f5bf" roughness={0.8} metalness={0} />
     </mesh>
   )
 }
@@ -1372,7 +1466,7 @@ const GoronCharacter = ({ position = [0, 0, 0] as [number, number, number], rota
 // Main scene component
 const RumorWoodsScene = () => {
   const collisionSystem = useCollisionSystem()
-  const mapRadius = 40 // Doubled map radius
+  const mapRadius = 56 // Increased map radius by 40% (40 * 1.4 = 56)
   const [showCollisions, setShowCollisions] = useState(false); // State for toggling collision visibility
   const [collisionDebug, setCollisionDebug] = useState<string | null>(null); // State for collision debug info
 
@@ -1411,45 +1505,79 @@ const RumorWoodsScene = () => {
   return (
     <>
       <ambientLight intensity={0.7} />
-      <directionalLight position={[10, 20, 10]} intensity={1} castShadow />
-      {/* Base terrain */}
-      <Ground scale={2} /> {/* Scale up the ground */}
-      {/* Water features */}
-      <WaterPond position={[10, -0.3, 0]} size={[30, 20]} />
-      {/* Tree houses - repositioned to not block the billboard */}
-      <TreeHouse position={[-20, 0, -10]} variant={0} />
-      <TreeHouse position={[20, 0, -10]} variant={1} />
-      <TreeHouse position={[20, 0, 20]} variant={2} />
-      <TreeHouse position={[-20, 0, 20]} variant={1} />
-      <TreeHouse position={[-15, 0, -25]} variant={2} />
-      <TreeHouse position={[15, 0, -25]} variant={0} />
-      {/* Giant Billboard - centered and prominent */}
-      <Billboard position={[0, 8, -30]} rotation={0} width={16} height={10} />
-      {/* Saria NPC standing below the billboard */}
-      <SariaNPC position={[0, 0, -25]} showCollisions={showCollisions} />
-      {/* Charunia (Goron-like character) standing under the billboard */}
-      <GoronCharacter position={[5, 0, -25]} rotation={-Math.PI * 0.25} name="Charunia" showCollisions={showCollisions} />
-      {/* Paths - adjusted to avoid blocking billboard */}
+      <directionalLight position={[20, 80, 20]} intensity={1.2} castShadow />
+      <pointLight position={[0, 40, 0]} intensity={0.8} color="#e0f7d1" distance={70} />
+      {/* Base terrain - forest floor */}
+      <Ground scale={1} />
+      
+      {/* Great Central Tree */}
+      <CentralTree position={[0, 0, 0]} scale={1} />
+      
+      {/* Decorative elements - forest floor details */}
+      <GrassPatch position={[-25, 0, -25]} size={8} />
+      <GrassPatch position={[25, 0, 25]} size={7} />
+      <GrassPatch position={[-25, 0, 25]} size={6} />
+      <GrassPatch position={[25, 0, -25]} size={6.5} />
+      
+      {/* Small water pond near the tree */}
+      <WaterPond position={[20, -0.3, -10]} size={[15, 10]} />
+      
+      {/* Main path from character to central tree */}
       <Path
         points={[
-          [-20, -10],
+          [0, -45],
+          [0, -30],
+          [0, -15],
           [0, 0],
-          [20, 20],
-          [0, 30],
+          [0, 15],
         ]}
+        width={4}
       />
-      {/* Decorative elements - spread out */}
-      <GrassPatch position={[-10, 0, 0]} size={5} />
-      <GrassPatch position={[10, 0, 10]} size={4} />
-      <GrassPatch position={[-10, 0, -10]} size={4.5} />
-      {/* Fairies for ambient lighting/atmosphere */}
-      <Fairy position={[10, 1, 10]} />
-      <Fairy position={[-10, 1.5, -10]} />
-      <Fairy position={[20, 2, -16]} />
-      <Fairy position={[-16, 1, 16]} />
-      <Fairy position={[0, 2, 0]} />
-      {/* Lost Woods entrance - moved to the side */}
-      <LostWoodsEntrance position={[-25, 0, -25]} rotation={Math.PI * 0.75} scale={1.5} />
+      
+      {/* Branching paths around the central tree */}
+      <Path
+        points={[
+          [-30, -30],
+          [-15, -15],
+          [0, 0],
+          [15, 15],
+          [30, 30],
+        ]}
+        width={3}
+      />
+      <Path
+        points={[
+          [-30, 30],
+          [-15, 15],
+          [0, 0],
+          [15, -15],
+          [30, -30],
+        ]}
+        width={3}
+      />
+      
+      {/* Fairies for ambient lighting/atmosphere around the tree */}
+      <Fairy position={[0, 15, 0]} />
+      <Fairy position={[10, 25, 10]} />
+      <Fairy position={[-10, 20, -10]} />
+      <Fairy position={[15, 30, -5]} />
+      <Fairy position={[-15, 35, 5]} />
+      <Fairy position={[0, 40, 0]} />
+      <Fairy position={[5, 50, 5]} />
+      <Fairy position={[-5, 45, -5]} />
+      
+      {/* Forest floor fairies - path to the tree */}
+      <Fairy position={[0, 1, -35]} />
+      <Fairy position={[0, 1.5, -25]} />
+      <Fairy position={[0, 2, -15]} />
+      <Fairy position={[0, 2.5, -5]} />
+      
+      {/* Perimeter fairies */}
+      <Fairy position={[30, 2, 30]} />
+      <Fairy position={[-30, 1.5, -30]} />
+      <Fairy position={[30, 2, -30]} />
+      <Fairy position={[-30, 1.5, 30]} />
+      
       {/* Boundary walls */}
       <RockWall radius={mapRadius} height={6} />
       {/* Character */}
@@ -1462,19 +1590,6 @@ const RumorWoodsScene = () => {
         size={[2, 2, 2]} 
         visible={showCollisions} // Toggle visibility with showCollisions
       />
-      
-      {/* Add Plant Characters (Makar-style) */}
-      <PlantCharacter position={[5, 0, -20]} rotation={Math.PI * 0.25} scale={0.8} showCollisions={showCollisions} />
-      <PlantCharacter position={[-5, 0, -20]} rotation={-Math.PI * 0.25} scale={0.9} showCollisions={showCollisions} />
-      <PlantCharacter position={[8, 0, -18]} rotation={Math.PI * 0.5} scale={0.7} showCollisions={showCollisions} />
-      <PlantCharacter position={[-8, 0, -18]} rotation={-Math.PI * 0.5} scale={1.0} showCollisions={showCollisions} />
-      <PlantCharacter position={[0, 0, -15]} rotation={0} scale={0.85} showCollisions={showCollisions} />
-      
-      {/* Add more plant characters around the map */}
-      <PlantCharacter position={[15, 0, 15]} rotation={Math.PI * 0.75} scale={0.9} showCollisions={showCollisions} />
-      <PlantCharacter position={[-15, 0, 15]} rotation={-Math.PI * 0.75} scale={0.8} showCollisions={showCollisions} />
-      <PlantCharacter position={[15, 0, -5]} rotation={Math.PI * 0.3} scale={0.75} showCollisions={showCollisions} />
-      <PlantCharacter position={[-15, 0, -5]} rotation={-Math.PI * 0.3} scale={0.95} showCollisions={showCollisions} />
     </>
   )
 }
@@ -1632,7 +1747,7 @@ const RumorWoods = () => {
       <Canvas
         shadows
         camera={{
-          position: [0, 25, 35],
+          position: [0, 15, -55],
           fov: 60,
           near: 0.1,
           far: 1000,
@@ -1640,8 +1755,8 @@ const RumorWoods = () => {
       >
         <Suspense fallback={null}>
           <RumorWoodsScene />
-          <Sky distance={450000} sunPosition={[1, 0.5, 0]} />
-          <CameraControls defaultDistance={35} />
+          <Sky distance={450000} sunPosition={[0.5, 0.7, 0.5]} rayleigh={1} turbidity={5} />
+          <CameraControls defaultDistance={45} />
         </Suspense>
         <Stats />
       </Canvas>
