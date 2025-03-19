@@ -62,7 +62,7 @@ const LoadingScreen = () => {
 }
 
 // Character controller component
-const CharacterController = ({ speed = 0.25, showCollisions = false, playerName = "Korok" }) => {
+const CharacterController = ({ speed = 0.45, showCollisions = false, playerName = "Korok" }) => {
   const characterRef = useRef<THREE.Group>(null)
   const modelRef = useRef<THREE.Group>(null)
   const { nodes, materials, scene } = useGLTF("/link.glb") as any
@@ -371,7 +371,7 @@ const CharacterController = ({ speed = 0.25, showCollisions = false, playerName 
     // Calculate movement direction
     let moveX = 0
     let moveZ = 0
-    const currentSpeed = isRunning ? speed * 1.8 : speed
+    const currentSpeed = isRunning ? speed * 2.2 : speed
 
     // Get input direction
     const inputDirection = new THREE.Vector3(0, 0, 0);
@@ -703,6 +703,69 @@ const Ground = ({ scale = 1 }: { scale?: number }) => {
   )
 }
 
+// Wooden Platform component
+const WoodenPlatform = ({ 
+  position = [0, 0, 0], 
+  rotation = 0,
+  size = [10, 1, 7]
+}: { 
+  position: [number, number, number]; 
+  rotation?: number;
+  size?: [number, number, number];
+}) => {
+  const woodTexture = useTexture("/placeholder.svg");
+  
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      {/* Main platform */}
+      <mesh castShadow receiveShadow position={[0, 0, 0]}>
+        <boxGeometry args={size} />
+        <meshStandardMaterial map={woodTexture} color="#8B4513" roughness={0.9} />
+      </mesh>
+      
+      {/* Support beam underneath */}
+      <mesh castShadow receiveShadow position={[-size[0]/3, -size[1] - 1, 0]}>
+        <boxGeometry args={[size[0]/3, 2, size[2]/2]} />
+        <meshStandardMaterial map={woodTexture} color="#6B4226" roughness={0.9} />
+      </mesh>
+      
+      {/* Platform edge details - wooden railing posts */}
+      {[...Array(6)].map((_, i) => (
+        <mesh 
+          key={`rail-${i}`} 
+          castShadow 
+          position={[
+            (i < 3) ? (size[0]/2 - 0.5) : (-size[0]/2 + 0.5),
+            size[1]/2 + 1, 
+            ((i % 3) - 1) * (size[2]/2 - 0.5)
+          ]}
+        >
+          <boxGeometry args={[0.5, 2, 0.5]} />
+          <meshStandardMaterial color="#8B4513" roughness={0.9} />
+        </mesh>
+      ))}
+      
+      {/* Horizontal railings connecting posts */}
+      <mesh castShadow position={[size[0]/2 - 0.5, size[1]/2 + 1.5, 0]}>
+        <boxGeometry args={[0.25, 0.25, size[2] - 1]} />
+        <meshStandardMaterial color="#8B4513" roughness={0.9} />
+      </mesh>
+      
+      <mesh castShadow position={[-size[0]/2 + 0.5, size[1]/2 + 1.5, 0]}>
+        <boxGeometry args={[0.25, 0.25, size[2] - 1]} />
+        <meshStandardMaterial color="#8B4513" roughness={0.9} />
+      </mesh>
+      
+      {/* Add physics collision box for the platform */}
+      <PhysicalObject 
+        position={[0, 0, 0]} 
+        size={size} 
+        visible={false} 
+      />
+    </group>
+  );
+};
+
 // Great Central Tree component
 const CentralTree = ({ position = [0, 0, 0], scale = 1 }: { position?: [number, number, number]; scale?: number }) => {
   const barkTexture = useTexture("/placeholder.svg")
@@ -724,21 +787,44 @@ const CentralTree = ({ position = [0, 0, 0], scale = 1 }: { position?: [number, 
         <meshStandardMaterial map={barkTexture} color="#c6a589" roughness={0.9} metalness={0.1} />
       </mesh>
       
+      {/* First wooden platform at a height reachable with a single jump */}
+      <WoodenPlatform 
+        position={[0, 3, 15]} // Position it in front of the tree at a height of 3 units
+        rotation={Math.PI} // Facing toward character start position
+        size={[12, 1, 8]} // Slightly larger for easier landing
+      />
+      
+      {/* Second wooden platform higher up - requires mastering multiple jumps to reach */}
+      <WoodenPlatform 
+        position={[-16, 70, 8]} // Position it on the opposite side and higher
+        rotation={Math.PI * 0.7} // Different angle
+        size={[8, 1, 6]} // Slightly smaller
+      />
+      
+      {/* Add a fairy on the higher platform as a reward */}
+      <Fairy position={[-16, 72, 8]} />
+      
       {/* Large bottom canopy - much higher */}
-      <mesh castShadow position={[0, 60, 0]}> // Position raised
-        <sphereGeometry args={[35, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.5]} /> // Larger canopy
+      <mesh castShadow position={[0, 60, 0]}>
+        {/* Position raised */}
+        <sphereGeometry args={[35, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+        {/* Larger canopy */}
         <meshStandardMaterial map={leavesTexture} color="#c4e2a9" roughness={0.8} metalness={0.1} side={THREE.DoubleSide} />
       </mesh>
       
       {/* Upper trunk - raised and longer */}
-      <mesh castShadow position={[0, 90, 0]}> // Position raised
-        <cylinderGeometry args={[7, 10, 40, 16]} /> // Longer trunk
+      <mesh castShadow position={[0, 90, 0]}>
+        {/* Position raised */}
+        <cylinderGeometry args={[7, 10, 40, 16]} />
+        {/* Longer trunk */}
         <meshStandardMaterial map={barkTexture} color="#d4b49e" roughness={0.9} metalness={0.1} />
       </mesh>
       
       {/* Upper canopy - much higher and larger */}
-      <mesh castShadow position={[0, 120, 0]}> // Position raised
-        <sphereGeometry args={[30, 32, 32]} /> // Larger canopy
+      <mesh castShadow position={[0, 120, 0]}>
+        {/* Position raised */}
+        <sphereGeometry args={[30, 32, 32]} />
+        {/* Larger canopy */}
         <meshStandardMaterial map={leavesTexture} color="#b6dcac" roughness={0.8} metalness={0.1} />
       </mesh>
       
@@ -1100,7 +1186,7 @@ const GrassPatch = ({ position, size }: { position: [number, number, number]; si
 }
 
 // Fairy component
-const Fairy = ({ position }: { position: [number, number, number] }) => {
+const Fairy = ({ position, color = "#88ccff" }: { position: [number, number, number], color?: string }) => {
   const fairyRef = useRef<THREE.Group>(null)
   const lightRef = useRef<THREE.PointLight>(null)
   const initialPosition = useRef(new THREE.Vector3(...position))
@@ -1130,15 +1216,89 @@ const Fairy = ({ position }: { position: [number, number, number] }) => {
       {/* Fairy wings */}
       <mesh castShadow position={[0, 0, -0.05]} rotation={[0, 0, Math.PI / 4]}>
         <planeGeometry args={[0.2, 0.1]} />
-        <meshStandardMaterial color="#aaddff" transparent opacity={0.7} side={THREE.DoubleSide} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} side={THREE.DoubleSide} />
       </mesh>
       <mesh castShadow position={[0, 0, -0.05]} rotation={[0, 0, -Math.PI / 4]}>
         <planeGeometry args={[0.2, 0.1]} />
-        <meshStandardMaterial color="#aaddff" transparent opacity={0.7} side={THREE.DoubleSide} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} side={THREE.DoubleSide} />
       </mesh>
 
       {/* Fairy light */}
-      <pointLight ref={lightRef} distance={3} intensity={1.5} color="#88ccff" />
+      <pointLight ref={lightRef} distance={3} intensity={1.5} color={color} />
+    </group>
+  )
+}
+
+// Visual guide component - floating arrow pointing to platforms
+const JumpGuide = ({ position, targetPosition }: { position: [number, number, number], targetPosition: [number, number, number] }) => {
+  const guideRef = useRef<THREE.Group>(null)
+  const initialPosition = useRef(new THREE.Vector3(...position))
+  
+  // Calculate direction to the target for the arrow to point at
+  const direction = new THREE.Vector3(
+    targetPosition[0] - position[0],
+    targetPosition[1] - position[1],
+    targetPosition[2] - position[2]
+  ).normalize()
+  
+  // Calculate rotation to make the arrow point at the target
+  const rotationY = Math.atan2(direction.x, direction.z)
+  const rotationX = Math.atan2(direction.y, Math.sqrt(direction.x * direction.x + direction.z * direction.z))
+  
+  useFrame(({ clock }) => {
+    if (guideRef.current) {
+      const time = clock.getElapsedTime()
+      
+      // Bobbing motion
+      guideRef.current.position.y = initialPosition.current.y + Math.sin(time * 1.5) * 0.5
+      
+      // Slight rotation
+      guideRef.current.rotation.z = Math.sin(time * 0.8) * 0.1
+    }
+  })
+  
+  return (
+    <group ref={guideRef} position={position} rotation={[rotationX, rotationY, 0]}>
+      {/* Arrow body */}
+      <mesh castShadow>
+        <cylinderGeometry args={[0.2, 0.2, 1.5, 8]} />
+        <meshStandardMaterial color="#f0f0f0" emissive="#ffffff" emissiveIntensity={0.3} />
+      </mesh>
+      
+      {/* Arrow head */}
+      <mesh castShadow position={[0, 1.0, 0]} rotation={[Math.PI, 0, 0]}>
+        <coneGeometry args={[0.4, 0.8, 8]} />
+        <meshStandardMaterial color="#f0f0f0" emissive="#ffffff" emissiveIntensity={0.3} />
+      </mesh>
+      
+      {/* Guide text - shows when player gets close */}
+      <sprite position={[0, -1, 0]} scale={[2, 0.7, 1]}>
+        <spriteMaterial>
+          <canvasTexture
+            attach="map"
+            args={[
+              (() => {
+                const canvas = document.createElement("canvas")
+                canvas.width = 256
+                canvas.height = 64
+                const context = canvas.getContext("2d")
+                if (context) {
+                  context.fillStyle = "rgba(0, 0, 0, 0.5)"
+                  context.fillRect(0, 0, canvas.width, canvas.height)
+                  context.font = "bold 18px Arial"
+                  context.textAlign = "center"
+                  context.fillStyle = "#ffffff"
+                  context.fillText("Press SPACE to jump!", canvas.width / 2, canvas.height / 2 + 6)
+                }
+                return canvas
+              })(),
+            ]}
+          />
+        </spriteMaterial>
+      </sprite>
+      
+      {/* Small guiding light */}
+      <pointLight distance={5} intensity={0.8} color="#ffffff" />
     </group>
   )
 }
@@ -1927,6 +2087,20 @@ const RumorWoodsScene = ({ playerName = "Korok" }: { playerName?: string }) => {
       <Fairy position={[30, 2, -30]} />
       <Fairy position={[-30, 1.5, 30]} />
       
+      {/* Special platform fairies with different colors */}
+      <Fairy position={[0, 5, 15]} color="#ffcc00" /> {/* Golden fairy at first platform */}
+      <Fairy position={[-16, 72, 8]} color="#ff88ff" /> {/* Pink fairy at higher platform - reward */}
+      
+      {/* Jump guide arrows pointing to platforms */}
+      <JumpGuide 
+        position={[0, 2, 0]} 
+        targetPosition={[0, 3, 15]} 
+      />
+      <JumpGuide 
+        position={[0, 5, 15]} 
+        targetPosition={[-16, 70, 8]} 
+      />
+      
       {/* Boundary walls - much higher */}
       <RockWall radius={mapRadius} height={120} />
       {/* Character */}
@@ -2036,17 +2210,17 @@ const RumorWoods = () => {
     
     // Use inline styles instead of classes to avoid any CSS conflicts
     Object.assign(instructionsPanel.style, {
-      position: 'fixed',
-      bottom: '20px',
-      right: '20px',
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-      color: 'white',
-      padding: '10px',
-      borderRadius: '8px',
-      maxWidth: '300px',
-      zIndex: '10000',
-      fontFamily: 'Arial, sans-serif',
-      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)'
+      position: "fixed",
+      bottom: "20px",
+      right: "20px",
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
+      color: "white",
+      padding: "10px",
+      borderRadius: "8px",
+      maxWidth: "300px",
+      zIndex: "10000",
+      fontFamily: "Arial, sans-serif",
+      boxShadow: "0 4px 8px rgba(0, 0, 0, 0.3)"
     });
     
     // Add content with inline styles
@@ -2060,6 +2234,7 @@ const RumorWoods = () => {
             <li>Mouse Drag: Rotate camera</li>
             <li>Q/E: Rotate camera left/right</li>
             <li>Shift: Run</li>
+            <li>Space: Jump (up to 5x in a row)</li>
             <li>C: Toggle collision boxes</li>
             <li>D: Debug collision system</li>
             <li>I: Toggle this help</li>
@@ -2102,11 +2277,11 @@ const RumorWoods = () => {
       }
     };
     
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
     
     return () => {
       document.body.removeChild(instructionsPanel);
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 
@@ -2114,66 +2289,66 @@ const RumorWoods = () => {
     <div style={{ width: "100vw", height: "100vh" }}>
       {showNameModal && (
         <div style={{
-          position: 'fixed',
+          position: "fixed",
           top: 0,
           left: 0,
-          width: '100vw',
-          height: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          width: "100vw",
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "rgba(0, 0, 0, 0.7)",
           zIndex: 1000,
-          backdropFilter: 'blur(8px)',
+          backdropFilter: "blur(8px)",
         }}>
           <div style={{
-            backgroundColor: '#a8cf8e',
-            padding: '30px',
-            borderRadius: '15px',
-            boxShadow: '0 5px 25px rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            maxWidth: '400px',
-            border: '3px solid #8a5a3c',
+            backgroundColor: "#a8cf8e",
+            padding: "30px",
+            borderRadius: "15px",
+            boxShadow: "0 5px 25px rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            maxWidth: "400px",
+            border: "3px solid #8a5a3c",
           }}>
             <h2 style={{
-              color: '#5d4037',
+              color: "#5d4037",
               marginTop: 0,
-              marginBottom: '20px',
-              fontFamily: 'Arial, sans-serif',
-              fontSize: '28px',
-              textAlign: 'center',
+              marginBottom: "20px",
+              fontFamily: "Arial, sans-serif",
+              fontSize: "28px",
+              textAlign: "center",
             }}>
               Welcome to Rumor Woods!
             </h2>
             <p style={{
-              color: '#5d4037',
-              marginBottom: '20px',
-              fontFamily: 'Arial, sans-serif',
-              fontSize: '16px',
-              textAlign: 'center',
-              lineHeight: '1.5',
+              color: "#5d4037",
+              marginBottom: "20px",
+              fontFamily: "Arial, sans-serif",
+              fontSize: "16px",
+              textAlign: "center",
+              lineHeight: "1.5",
             }}>
-              You'll be playing as a little Korok forest spirit exploring a magical realm.
+              You&apos;ll be playing as a little Korok forest spirit exploring a magical realm.
               <br />
               Please enter your name:
             </p>
-            <form onSubmit={handleNameSubmit} style={{ width: '100%' }}>
+            <form onSubmit={handleNameSubmit} style={{ width: "100%" }}>
               <input
                 type="text"
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
                 style={{
-                  width: '100%',
-                  padding: '10px',
-                  marginBottom: '20px',
-                  boxSizing: 'border-box',
-                  border: '2px solid #8a5a3c',
-                  borderRadius: '5px',
-                  fontSize: '16px',
-                  backgroundColor: '#f5e8cb',
-                  color: '#5d4037',
+                  width: "100%",
+                  padding: "10px",
+                  marginBottom: "20px",
+                  boxSizing: "border-box",
+                  border: "2px solid #8a5a3c",
+                  borderRadius: "5px",
+                  fontSize: "16px",
+                  backgroundColor: "#f5e8cb",
+                  color: "#5d4037",
                 }}
                 autoFocus
                 maxLength={20}
@@ -2181,29 +2356,29 @@ const RumorWoods = () => {
               <button
                 type="submit"
                 style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: '#8a5a3c',
-                  color: '#f5e8cb',
-                  border: 'none',
-                  borderRadius: '5px',
-                  fontSize: '18px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  transition: 'background-color 0.2s',
+                  width: "100%",
+                  padding: "12px",
+                  backgroundColor: "#8a5a3c",
+                  color: "#f5e8cb",
+                  border: "none",
+                  borderRadius: "5px",
+                  fontSize: "18px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  transition: "background-color 0.2s",
                 }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#6d4c33'}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#8a5a3c'}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#6d4c33"}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#8a5a3c"}
               >
                 Start Adventure
               </button>
             </form>
             <div style={{
-              marginTop: '20px',
-              fontSize: '14px',
-              color: '#5d4037',
-              fontStyle: 'italic',
-              textAlign: 'center',
+              marginTop: "20px",
+              fontSize: "14px",
+              color: "#5d4037",
+              fontStyle: "italic",
+              textAlign: "center",
             }}>
               Use WASD to move and Mouse to look around!
             </div>
