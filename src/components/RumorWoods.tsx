@@ -73,12 +73,14 @@ const CharacterController = ({ speed = 0.25, showCollisions = false, playerName 
     right: false,
     rotateLeft: false,
     rotateRight: false,
+    jump: false,
   })
   const { camera } = useThree()
-  const cameraOffsetRef = useRef(new THREE.Vector3(0, 3.5, 7))
+  const cameraOffsetRef = useRef(new THREE.Vector3(0, 4.2, 8.4)) // 20% further out (original values were 3.5 and 7)
   const cameraAngleRef = useRef(Math.PI) // Initial camera angle (behind character)
   const cameraElevationRef = useRef(0) // Camera elevation angle
   const rotationSpeed = 0.03 // Camera rotation speed
+  const cameraDistance = 8.4 // Base camera distance (20% more than original 7)
   const collisionSystem = useCollisionSystem()
   const [isRunning, setIsRunning] = useState(false)
   const [animationFrame, setAnimationFrame] = useState(0)
@@ -88,6 +90,17 @@ const CharacterController = ({ speed = 0.25, showCollisions = false, playerName 
   const lastMousePosition = useRef({ x: 0, y: 0 })
   const [modelLoaded, setModelLoaded] = useState(false)
   const [modelError, setModelError] = useState<string | null>(null)
+  
+  // Physics state for vertical movement
+  const verticalVelocityRef = useRef(0)
+  const isJumpingRef = useRef(false)
+  const isFallingRef = useRef(false) // Track if we're falling to apply different gravity
+  const jumpCountRef = useRef(0) // Track number of jumps performed
+  const maxJumps = 5 // Maximum consecutive jumps allowed
+  const jumpHeight = 1.5 // Maximum jump height
+  const riseGravity = 0.05 // Gravity strength when rising
+  const fallGravity = 0.042 // Gravity strength when falling (1.2x slower)
+  const groundLevel = 0 // Y position of the ground
   
   // Use refs for collision debug info to avoid re-renders
   const lastCollisionRef = useRef<string | null>(null)
@@ -158,12 +171,35 @@ const CharacterController = ({ speed = 0.25, showCollisions = false, playerName 
     if (parachuteRef.current) {
       const t = clock.getElapsedTime()
       
-      // Gentle vertical bobbing
-      parachuteRef.current.position.y = Math.sin(t * 0.8) * 0.1 + 2.2
-      
-      // Subtle rotation
-      parachuteRef.current.rotation.x = Math.sin(t * 0.5) * 0.03
-      parachuteRef.current.rotation.z = Math.sin(t * 0.7) * 0.03
+      // Adjust parachute based on jumping state
+      if (isJumpingRef.current) {
+        // Scale parachute animation based on jump count - more dramatic with higher counts
+        const jumpIntensity = 1 + (jumpCountRef.current * 0.15);
+        
+        if (isFallingRef.current) {
+          // When falling, expand the parachute more to show slowing effect
+          parachuteRef.current.position.y = 2.2 + Math.sin(t * 2) * 0.15 + 0.4;
+          parachuteRef.current.rotation.x = Math.sin(t * 1.5) * 0.15 * jumpIntensity;
+          parachuteRef.current.rotation.z = Math.sin(t * 1.8) * 0.15 * jumpIntensity;
+          // Scale up parachute during fall, more with each jump
+          const scaleValue = 1.15 + (jumpCountRef.current * 0.05);
+          parachuteRef.current.scale.set(scaleValue, scaleValue, scaleValue);
+        } else {
+          // When rising, make parachute more active but not as expanded
+          parachuteRef.current.position.y = 2.2 + Math.sin(t * 4) * 0.2 + 0.3;
+          parachuteRef.current.rotation.x = Math.sin(t * 2) * 0.1 * jumpIntensity;
+          parachuteRef.current.rotation.z = Math.sin(t * 3) * 0.1 * jumpIntensity;
+          // More compact during rising phase
+          const scaleValue = 1 - (jumpCountRef.current * 0.02);
+          parachuteRef.current.scale.set(scaleValue, scaleValue, scaleValue);
+        }
+      } else {
+        // Normal gentle bobbing when not jumping
+        parachuteRef.current.position.y = Math.sin(t * 0.8) * 0.1 + 2.2;
+        parachuteRef.current.rotation.x = Math.sin(t * 0.5) * 0.03;
+        parachuteRef.current.rotation.z = Math.sin(t * 0.7) * 0.03;
+        parachuteRef.current.scale.set(1, 1, 1);
+      }
     }
   })
 
@@ -201,6 +237,29 @@ const CharacterController = ({ speed = 0.25, showCollisions = false, playerName 
       
       // Handle other keys
       if (e.key === "Shift") setIsRunning(true);
+      
+      // Handle spacebar for jumping
+      if (e.key === " ") {
+        // Allow jumping from ground or additional jumps in mid-air (up to maxJumps)
+        if (
+          // First jump from ground
+          (!isJumpingRef.current && characterRef.current?.position.y <= groundLevel + 0.01) || 
+          // Additional mid-air jumps
+          (isJumpingRef.current && jumpCountRef.current < maxJumps)
+        ) {
+          // Increment jump counter
+          jumpCountRef.current += 1;
+          
+          console.log(`Jump ${jumpCountRef.current} initiated`);
+          isJumpingRef.current = true;
+          isFallingRef.current = false; // Always reset to rising when jumping
+          
+          // Add upward velocity (always the same boost regardless of current state)
+          verticalVelocityRef.current = Math.sqrt(2 * riseGravity * jumpHeight);
+          
+          setKeys(prev => ({ ...prev, jump: true }));
+        }
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -213,6 +272,12 @@ const CharacterController = ({ speed = 0.25, showCollisions = false, playerName 
       
       // Handle other keys
       if (e.key === "Shift") setIsRunning(false);
+      
+      // Handle spacebar release
+      if (e.key === " ") {
+        setKeys(prev => ({ ...prev, jump: false }));
+        // We don't reset isJumpingRef here - that happens when we hit the ground
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -269,6 +334,39 @@ const CharacterController = ({ speed = 0.25, showCollisions = false, playerName 
 
     const character = characterRef.current
     const time = clock.getElapsedTime()
+
+    // Apply gravity and vertical velocity
+    if (character.position.y > groundLevel || verticalVelocityRef.current !== 0) {
+      // Detect transition from rising to falling
+      if (verticalVelocityRef.current <= 0 && !isFallingRef.current) {
+        console.log('Peak of jump reached, now falling');
+        isFallingRef.current = true;
+      }
+      
+      // Apply appropriate gravity based on rising or falling
+      if (isFallingRef.current) {
+        // Slower gravity when falling
+        verticalVelocityRef.current -= fallGravity;
+      } else {
+        // Normal gravity when rising
+        verticalVelocityRef.current -= riseGravity;
+      }
+      
+      // Calculate new vertical position
+      const newY = character.position.y + verticalVelocityRef.current;
+      
+      // Check if we've hit the ground
+      if (newY <= groundLevel && verticalVelocityRef.current < 0) {
+        character.position.y = groundLevel;
+        verticalVelocityRef.current = 0;
+        isJumpingRef.current = false;
+        isFallingRef.current = false;
+        jumpCountRef.current = 0; // Reset jump counter when landing
+        console.log('Landed on ground, jump counter reset');
+      } else {
+        character.position.y = newY;
+      }
+    }
 
     // Calculate movement direction
     let moveX = 0
@@ -364,18 +462,20 @@ const CharacterController = ({ speed = 0.25, showCollisions = false, playerName 
     }
 
     // Update camera offset based on camera angle and elevation
-    const horizontalDistance = 7 * Math.cos(cameraElevationRef.current)
+    // Using cameraDistance (20% increased from original 7)
+    const horizontalDistance = cameraDistance * Math.cos(cameraElevationRef.current)
     cameraOffsetRef.current.set(
       Math.sin(cameraAngleRef.current) * horizontalDistance,
-      2.5 + 4 * Math.sin(cameraElevationRef.current),
+      3.0 + 4.8 * Math.sin(cameraElevationRef.current), // 20% increase from original 2.5 and 4
       Math.cos(cameraAngleRef.current) * horizontalDistance,
     )
 
     // Always update camera position to follow character
     camera.position.x = character.position.x + cameraOffsetRef.current.x
-    camera.position.y = character.position.y + cameraOffsetRef.current.y + 1
+    camera.position.y = character.position.y + cameraOffsetRef.current.y + 1.2 // Slightly higher vertical offset
     camera.position.z = character.position.z + cameraOffsetRef.current.z
-    camera.lookAt(character.position.x, character.position.y + 1, character.position.z)
+    // Adjust the look target to be slightly higher as well
+    camera.lookAt(character.position.x, character.position.y + 1.2, character.position.z)
 
     // No weapon animations anymore
   })
@@ -480,7 +580,20 @@ const CharacterController = ({ speed = 0.25, showCollisions = false, playerName 
           {/* Main leaf - concave shape */}
           <mesh castShadow position={[0, 0, 0]}>
             <sphereGeometry args={[0.8, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
-            <meshStandardMaterial color="#a8cf8e" roughness={0.8} side={THREE.DoubleSide} />
+            <meshStandardMaterial 
+              color={
+                isJumpingRef.current 
+                  ? (isFallingRef.current 
+                      // Color gets brighter with each jump
+                      ? `rgb(${213 + jumpCountRef.current * 8}, 255, ${192 + jumpCountRef.current * 12})` 
+                      : `rgb(${196 + jumpCountRef.current * 8}, ${240 + jumpCountRef.current * 3}, ${168 + jumpCountRef.current * 15})`) 
+                  : "#a8cf8e"
+              } 
+              emissive={isJumpingRef.current && jumpCountRef.current > 2 ? "#a0ff80" : "#000000"}
+              emissiveIntensity={jumpCountRef.current * 0.1}
+              roughness={0.8} 
+              side={THREE.DoubleSide} 
+            />
           </mesh>
           
           {/* Leaf underside details - veins */}
@@ -494,6 +607,58 @@ const CharacterController = ({ speed = 0.25, showCollisions = false, playerName 
             <cylinderGeometry args={[0.05, 0.05, 0.4, 6]} />
             <meshStandardMaterial color="#8a5a3c" roughness={0.9} />
           </mesh>
+          
+          {/* Jump effect particles - different for rising vs falling */}
+          {isJumpingRef.current && (
+            <>
+              {isFallingRef.current ? (
+                // Falling particles - wider spread, more floating look
+                [...Array(12)].map((_, i) => (
+                  <mesh key={i} castShadow position={[
+                    Math.sin(i * Math.PI / 6) * 1.2,
+                    Math.cos(i * Math.PI / 6) * 0.4 - 0.3,
+                    Math.cos(i * Math.PI / 6) * 1.2
+                  ]}>
+                    <sphereGeometry args={[0.05, 8, 8]} />
+                    <meshStandardMaterial color="#e5ffcf" emissive="#c0ffa0" emissiveIntensity={0.6} />
+                  </mesh>
+                ))
+              ) : (
+                // Rising particles - tighter formation, more energetic
+                [...Array(8)].map((_, i) => (
+                  <mesh key={i} castShadow position={[
+                    Math.sin(i * Math.PI / 4) * 1.0,
+                    Math.cos(i * Math.PI / 4) * 0.3 - 0.2,
+                    Math.cos(i * Math.PI / 4) * 1.0
+                  ]}>
+                    <sphereGeometry args={[0.06, 8, 8]} />
+                    <meshStandardMaterial color="#d8f0c8" emissive="#a8ff8e" emissiveIntensity={0.5} />
+                  </mesh>
+                ))
+              )}
+              
+              {/* Jump counter indicator - small glowing orbs showing remaining jumps */}
+              {jumpCountRef.current > 0 && jumpCountRef.current < maxJumps && (
+                <group position={[0, 0.8, 0]}>
+                  {[...Array(maxJumps - jumpCountRef.current)].map((_, i) => (
+                    <mesh key={i} position={[
+                      // Arrange in a small arc above the leaf
+                      (i - (maxJumps - jumpCountRef.current - 1) / 2) * 0.15,
+                      0.6,
+                      0
+                    ]}>
+                      <sphereGeometry args={[0.04, 8, 8]} />
+                      <meshStandardMaterial 
+                        color="#ffffff" 
+                        emissive="#7fff7f" 
+                        emissiveIntensity={0.8} 
+                      />
+                    </mesh>
+                  ))}
+                </group>
+              )}
+            </>
+          )}
         </group>
 
         {/* Korok Name Tag */}
