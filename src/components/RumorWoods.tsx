@@ -671,7 +671,7 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
         </group>
 
         {/* Korok Name Tag */}
-        <sprite position={[0, 3.2, 0]} scale={[3, 0.8, 1]}>
+        <sprite position={[0, 3.2, 0]} scale={[3, 0.7, 1]}>
           <spriteMaterial>
             <canvasTexture
               attach="map"
@@ -782,17 +782,21 @@ const CentralTree = ({ position = [0, 0, 0], scale = 1 }: { position?: [number, 
   
   return (
     <group position={position} scale={[scale, scale, scale]}>
-      {/* Massive trunk - much taller */}
+      {/* Massive trunk - starts higher above ground */}
       <mesh castShadow position={[0, 40, 0]}>
         <cylinderGeometry args={[8, 14, 80, 16]} />
         <meshStandardMaterial map={barkTexture} color="#c6a589" roughness={0.9} metalness={0.1} />
       </mesh>
       
-      {/* No root logs, tree emerges directly from the ground */}
-      
-      {/* Middle trunk reinforcement */}
+      {/* Middle trunk reinforcement - raised significantly higher */}
       <mesh castShadow position={[0, 20, 0]}>
         <cylinderGeometry args={[10, 12, 10, 16]} />
+        <meshStandardMaterial map={barkTexture} color="#c6a589" roughness={0.9} metalness={0.1} />
+      </mesh>
+      
+      {/* Base trunk - raised even higher to completely avoid ground level */}
+      <mesh castShadow position={[0, 10, 0]}>
+        <cylinderGeometry args={[12, 15, 20, 16]} />
         <meshStandardMaterial map={barkTexture} color="#c6a589" roughness={0.9} metalness={0.1} />
       </mesh>
       
@@ -951,10 +955,10 @@ const CentralTree = ({ position = [0, 0, 0], scale = 1 }: { position?: [number, 
         visible={false} 
       />
       
-      {/* Main trunk base collision - narrower without roots */}
+      {/* Main trunk base collision - raised higher */}
       <PhysicalObject 
-        position={[0, 1, 0]} 
-        size={[15, 2, 15]} 
+        position={[0, 10, 0]} 
+        size={[15, 20, 15]} 
         visible={false} 
       />
     </group>
@@ -1019,19 +1023,6 @@ const TreeHouse = ({
         <cylinderGeometry args={[1, 1.2, 5]} />
         <meshStandardMaterial map={woodTexture} color={trunkColors[variant % 3]} roughness={0.9} metalness={0} />
       </mesh>
-
-      {/* Tree Roots */}
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <mesh
-          key={i}
-          castShadow
-          position={[Math.sin((i * Math.PI) / 3) * 1.5, -0.3, Math.cos((i * Math.PI) / 3) * 1.5]}
-          rotation={[Math.PI / 4, 0, 0]}
-        >
-          <cylinderGeometry args={[0.2, 0.4, 0.8, 6]} />
-          <meshStandardMaterial color={trunkColors[variant % 3]} />
-        </mesh>
-      ))}
 
       {/* Ladder */}
       <mesh castShadow position={[0, 2, 1.5]} rotation={[Math.PI / 6, 0, 0]}>
@@ -1818,8 +1809,8 @@ const GoronCharacter = ({ position = [0, 0, 0] as [number, number, number], rota
   );
 };
 
-// Rain particle system
-const Rain = ({ count = 5000, area = 100, intensity = 1.0, color = '#88ccff' }) => {
+// Rain particle system with teardrop shapes
+const Rain = ({ count = 5000, area = 100, intensity = 1.0, color = '#ffffff' }) => {
   const mesh = useRef<THREE.Points>(null);
   const positions = useMemo(() => {
     const positions = new Float32Array(count * 3);
@@ -1839,7 +1830,7 @@ const Rain = ({ count = 5000, area = 100, intensity = 1.0, color = '#88ccff' }) 
     return speeds;
   }, [count]);
   
-  // Custom shader for elongated raindrops with alpha fade
+  // Custom shader for teardrop-shaped raindrops
   const rainMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
       transparent: true,
@@ -1854,7 +1845,7 @@ const Rain = ({ count = 5000, area = 100, intensity = 1.0, color = '#88ccff' }) 
         void main() {
           vSpeed = speed;
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = 2.0 * (300.0 / -mvPosition.z);
+          gl_PointSize = 3.0 * (300.0 / -mvPosition.z);
           gl_Position = projectionMatrix * mvPosition;
         }
       `,
@@ -1862,9 +1853,35 @@ const Rain = ({ count = 5000, area = 100, intensity = 1.0, color = '#88ccff' }) 
         uniform vec3 color;
         uniform sampler2D pointTexture;
         varying float vSpeed;
+        
         void main() {
-          float opacity = 0.3 + vSpeed * 0.5;
-          gl_FragColor = vec4(color, opacity) * texture2D(pointTexture, gl_PointCoord);
+          // Create teardrop shape
+          vec2 center = vec2(0.5, 0.5);
+          vec2 p = gl_PointCoord - center;
+          
+          // Elongate in the y direction for teardrop effect
+          p.y *= 1.5;
+          
+          // Calculate distance from center
+          float dist = length(p);
+          
+          // Create teardrop shape by modifying the bottom part
+          if (p.y > 0.0) {
+            // Make bottom part more pointed
+            dist += p.y * 0.3;
+          } else {
+            // Make top part more rounded
+            dist -= p.y * 0.1;
+          }
+          
+          // Apply fade at edges
+          float alpha = 1.0 - smoothstep(0.3, 0.5, dist);
+          
+          // Add some variation based on speed
+          alpha *= 0.5 + vSpeed * 1.5;
+          
+          // Apply color
+          gl_FragColor = vec4(color, alpha);
         }
       `,
     });
@@ -2017,6 +2034,8 @@ const RumorWoodsScene = ({ playerName = "Korok" }: { playerName?: string }) => {
       {/* Great Central Tree */}
       <CentralTree position={[0, 0, 0]} scale={1} />
       
+      {/* Remove any decorative logs or roots that might be causing the issue */}
+      
       {/* Decorative elements - forest floor details */}
       <GrassPatch position={[-25, 0, -25]} size={8} />
       <GrassPatch position={[25, 0, 25]} size={7} />
@@ -2026,7 +2045,9 @@ const RumorWoodsScene = ({ playerName = "Korok" }: { playerName?: string }) => {
       {/* Small water pond near the tree */}
       <WaterPond position={[20, -0.3, -10]} size={[15, 10]} />
       
-      {/* Main path from character to central tree */}
+      {/* Main path from character to central tree - start further away from character */}
+      {/* Remove the main path that might be causing the issue */}
+      {/* 
       <Path
         points={[
           [0, -45],
@@ -2037,6 +2058,7 @@ const RumorWoodsScene = ({ playerName = "Korok" }: { playerName?: string }) => {
         ]}
         width={4}
       />
+      */}
       
       {/* Branching paths around the central tree */}
       <Path
@@ -2119,8 +2141,8 @@ const RumorWoodsScene = ({ playerName = "Korok" }: { playerName?: string }) => {
       {/* Add visible boundary for debugging - much higher */}
       <MapBoundary radius={mapRadius} height={120} visible={showCollisions} />
       
-      {/* Add rain effect */}
-      <Rain count={7000} area={110} intensity={1.2} color="#aaddff" />
+      {/* Add rain effect - white teardrop-shaped raindrops */}
+      <Rain count={7000} area={110} intensity={1.2} color="#e6f3ff" />
       
       {/* Add mist effect */}
       <Mist count={30} color="#d8f0e0" />
