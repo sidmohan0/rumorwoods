@@ -1976,6 +1976,159 @@ const Mist = ({ count = 20, color = '#d8f0e0' }) => {
   );
 };
 
+// Elderly Goron Statesman component
+const ElderlyGoron = ({ position = [0, 0, 0] as [number, number, number], rotation = 0, showCollisions = false }) => {
+  const characterRef = useRef<THREE.Group>(null);
+  const breatheOffsetRef = useRef(0);
+
+  // Breathing animation
+  useFrame(({ clock }) => {
+    if (characterRef.current) {
+      const time = clock.getElapsedTime();
+      const newBreatheOffset = Math.sin(time * 0.3) * 0.03;
+      breatheOffsetRef.current = newBreatheOffset;
+      
+      // Apply subtle breathing animation to the body
+      if (characterRef.current.children[0]) {
+        characterRef.current.children[0].scale.set(
+          1 + newBreatheOffset, 
+          1 + newBreatheOffset, 
+          1 + newBreatheOffset
+        );
+      }
+    }
+  });
+
+  // Create a canvas texture for the name tag
+  const nameTagTexture = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 64;
+    const context = canvas.getContext("2d");
+
+    if (context) {
+      context.fillStyle = "#000000";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.font = "bold 36px Arial";
+      context.textAlign = "center";
+      context.fillStyle = "#ffffff";
+      context.fillText("Elder Darunia", canvas.width / 2, canvas.height / 2 + 12);
+    }
+
+    return new THREE.CanvasTexture(canvas);
+  }, []);
+
+  return (
+    <group ref={characterRef} position={position} rotation={[0, rotation, 0]}>
+      {/* Body (golden/yellow) */}
+      <mesh castShadow position={[0, 1.2, 0]}>
+        <sphereGeometry args={[1.2, 24, 24]} />
+        <meshStandardMaterial color="#D4AF37" roughness={0.7} metalness={0.3} />
+      </mesh>
+      
+      {/* Head/Face (same color as body) */}
+      <mesh castShadow position={[0, 2.6, 0]}>
+        <sphereGeometry args={[0.8, 24, 24]} />
+        <meshStandardMaterial color="#D4AF37" roughness={0.7} metalness={0.3} />
+      </mesh>
+      
+      {/* Eyes (black with white highlights) */}
+      <mesh position={[0.3, 2.7, 0.6]}>
+        <sphereGeometry args={[0.15, 16, 16]} />
+        <meshStandardMaterial color="#000000" />
+      </mesh>
+      <mesh position={[-0.3, 2.7, 0.6]}>
+        <sphereGeometry args={[0.15, 16, 16]} />
+        <meshStandardMaterial color="#000000" />
+      </mesh>
+      
+      {/* Eye highlights */}
+      <mesh position={[0.35, 2.75, 0.7]}>
+        <sphereGeometry args={[0.05, 8, 8]} />
+        <meshStandardMaterial color="#FFFFFF" />
+      </mesh>
+      <mesh position={[-0.25, 2.75, 0.7]}>
+        <sphereGeometry args={[0.05, 8, 8]} />
+        <meshStandardMaterial color="#FFFFFF" />
+      </mesh>
+      
+      {/* Mouth (dark line) */}
+      <mesh position={[0, 2.4, 0.7]} rotation={[0, 0, 0]}>
+        <boxGeometry args={[0.4, 0.1, 0.1]} />
+        <meshStandardMaterial color="#5D4037" />
+      </mesh>
+      
+      {/* Arms (thick and muscular) */}
+      <mesh castShadow position={[1.3, 1.2, 0]} rotation={[0, 0, -0.3]}>
+        <capsuleGeometry args={[0.4, 1.0, 8, 16]} />
+        <meshStandardMaterial color="#D4AF37" roughness={0.7} metalness={0.3} />
+      </mesh>
+      <mesh castShadow position={[-1.3, 1.2, 0]} rotation={[0, 0, 0.3]}>
+        <capsuleGeometry args={[0.4, 1.0, 8, 16]} />
+        <meshStandardMaterial color="#D4AF37" roughness={0.7} metalness={0.3} />
+      </mesh>
+      
+      {/* Hands (large fists) */}
+      <mesh castShadow position={[1.8, 0.8, 0]}>
+        <sphereGeometry args={[0.45, 16, 16]} />
+        <meshStandardMaterial color="#C9A227" roughness={0.8} metalness={0.2} />
+      </mesh>
+      <mesh castShadow position={[-1.8, 0.8, 0]}>
+        <sphereGeometry args={[0.45, 16, 16]} />
+        <meshStandardMaterial color="#C9A227" roughness={0.8} metalness={0.2} />
+      </mesh>
+      
+      {/* Legs (short and stout) */}
+      <mesh castShadow position={[0.5, 0.4, 0]}>
+        <capsuleGeometry args={[0.35, 0.5, 8, 16]} />
+        <meshStandardMaterial color="#D4AF37" roughness={0.7} metalness={0.3} />
+      </mesh>
+      <mesh castShadow position={[-0.5, 0.4, 0]}>
+        <capsuleGeometry args={[0.35, 0.5, 8, 16]} />
+        <meshStandardMaterial color="#D4AF37" roughness={0.7} metalness={0.3} />
+      </mesh>
+      
+      {/* Feet */}
+      <mesh castShadow position={[0.5, 0.15, 0]}>
+        <sphereGeometry args={[0.4, 16, 16]} />
+        <meshStandardMaterial color="#C9A227" roughness={0.8} metalness={0.2} />
+      </mesh>
+      <mesh castShadow position={[-0.5, 0.15, 0]}>
+        <sphereGeometry args={[0.4, 16, 16]} />
+        <meshStandardMaterial color="#C9A227" roughness={0.8} metalness={0.2} />
+      </mesh>
+      
+      {/* Back spikes (star-shaped top) */}
+      <mesh castShadow position={[0, 2.6, -0.5]} rotation={[Math.PI * 0.2, 0, 0]}>
+        <coneGeometry args={[0.4, 0.8, 5]} />
+        <meshStandardMaterial color="#FFD700" roughness={0.6} metalness={0.4} />
+      </mesh>
+      
+      {/* Body spikes/details */}
+      <mesh castShadow position={[0.8, 1.5, -0.6]} rotation={[0, Math.PI * 0.25, 0]}>
+        <coneGeometry args={[0.3, 0.6, 5]} />
+        <meshStandardMaterial color="#FFD700" roughness={0.6} metalness={0.4} />
+      </mesh>
+      <mesh castShadow position={[-0.8, 1.5, -0.6]} rotation={[0, -Math.PI * 0.25, 0]}>
+        <coneGeometry args={[0.3, 0.6, 5]} />
+        <meshStandardMaterial color="#FFD700" roughness={0.6} metalness={0.4} />
+      </mesh>
+      
+      {/* Name tag */}
+      <sprite position={[0, 3.8, 0]} scale={[3, 0.7, 1]}>
+        <spriteMaterial map={nameTagTexture} />
+      </sprite>
+      
+      {/* Improved collision for the Goron character */}
+      <PhysicalObject 
+        position={[0, 1.5, 0]} 
+        size={[3.5, 3.5, 3.5]} 
+        visible={showCollisions} // Use showCollisions prop
+      />
+    </group>
+  );
+};
+
 // Main scene component
 const RumorWoodsScene = ({ playerName = "Korok" }: { playerName?: string }) => {
   const collisionSystem = useCollisionSystem()
@@ -2138,12 +2291,19 @@ const RumorWoodsScene = ({ playerName = "Korok" }: { playerName?: string }) => {
       <RockWall radius={mapRadius} height={120} />
       {/* Character */}
       <CharacterController playerName={playerName} showCollisions={showCollisions} />
+      {/* Add Elderly Goron Statesman to the right of player's starting position */}
+      <ElderlyGoron 
+        position={[15, 0, -45]} 
+        rotation={-Math.PI/4} // Slightly turned toward the player
+        showCollisions={showCollisions}
+      />
+      
       {/* Add visible boundary for debugging - much higher */}
       <MapBoundary radius={mapRadius} height={120} visible={showCollisions} />
       
       {/* Add rain effect - white teardrop-shaped raindrops */}
       <Rain count={7000} area={110} intensity={1.2} color="#e6f3ff" />
-      
+            
       {/* Add mist effect */}
       <Mist count={30} color="#d8f0e0" />
       
