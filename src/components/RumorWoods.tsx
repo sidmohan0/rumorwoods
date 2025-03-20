@@ -2752,8 +2752,70 @@ const RumorWoods = () => {
     };
   }, []);
 
+  // Background music
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(true);
+  
+  // Initialize background music
+  useEffect(() => {
+    const audio = new Audio('/soundtrack/intro-root-basin.mp3');
+    audio.loop = true;
+    audio.volume = 0.5;
+    
+    // Try to play the audio
+    if (isMusicPlaying) {
+      audio.play().catch(err => console.error("Audio playback error:", err));
+    }
+    
+    // Store the audio element in ref for potential controls later
+    audioRef.current = audio;
+    
+    // Cleanup function to stop audio when component unmounts
+    return () => {
+      audio.pause();
+      audio.src = '';
+    };
+  }, [isMusicPlaying]); // Run when isMusicPlaying changes
+  
+  // Toggle music function
+  const toggleMusic = () => {
+    if (audioRef.current) {
+      if (isMusicPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play().catch(err => console.error("Audio playback error:", err));
+      }
+      setIsMusicPlaying(!isMusicPlaying);
+    }
+  };
+  
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
+      {/* Audio controls */}
+      <div 
+        onClick={toggleMusic}
+        style={{
+          position: "fixed",
+          top: "20px",
+          right: "20px",
+          backgroundColor: "#8a5a3c",
+          color: "#f5e8cb",
+          width: "40px",
+          height: "40px",
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          zIndex: 1000,
+          boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
+          border: "2px solid #f5e8cb"
+        }}
+        title={isMusicPlaying ? "Mute music" : "Play music"}
+      >
+        {isMusicPlaying ? "🔊" : "🔇"}
+      </div>
+      
       {/* Section title display */}
       {sectionTitle && (
         <div 
