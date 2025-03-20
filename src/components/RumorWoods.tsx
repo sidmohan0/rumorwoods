@@ -982,6 +982,49 @@ const CentralTree = ({ position = [0, 0, 0], scale = 1 }: { position?: [number, 
       {/* Add a fairy on the higher platform as a reward */}
       <Fairy position={[-16, 72, 8]} />
       
+      {/* Series of jumpable platforms leading up to the tree */}
+      {/* Platform 1: Starting point, positioned toward character start direction (-z axis) */}
+      <WoodenPlatform 
+        position={[0, 1.5, -25]} 
+        rotation={0} 
+        size={[6, 1, 4]} 
+      />
+      
+      {/* Platform 2: Slightly higher and closer to the tree */}
+      <WoodenPlatform 
+        position={[5, 3, -18]} 
+        rotation={Math.PI * 0.25} 
+        size={[5, 1, 4]} 
+      />
+      
+      {/* Platform 3: Continue upward path */}
+      <WoodenPlatform 
+        position={[8, 5, -12]} 
+        rotation={Math.PI * 0.35} 
+        size={[5, 1, 4]} 
+      />
+      
+      {/* Platform 4: Higher platform */}
+      <WoodenPlatform 
+        position={[6, 7.5, -5]} 
+        rotation={Math.PI * 0.5} 
+        size={[5, 1, 4]} 
+      />
+      
+      {/* Platform 5: Almost at tree level */}
+      <WoodenPlatform 
+        position={[3, 10, 0]} 
+        rotation={Math.PI * 0.75} 
+        size={[5, 1, 4]} 
+      />
+      
+      {/* Platform 6: Platform connecting to the tree trunk */}
+      <WoodenPlatform 
+        position={[0, 12.5, 7]} 
+        rotation={Math.PI} 
+        size={[6, 1, 5]} 
+      />
+      
       {/* Large bottom canopy - much higher */}
       <mesh castShadow position={[0, 60, 0]}>
         {/* Position raised */}
@@ -2585,12 +2628,46 @@ const RumorWoods = () => {
   const [playerName, setPlayerName] = useState("Korok")
   const [showNameModal, setShowNameModal] = useState(true)
   const [gameStarted, setGameStarted] = useState(false)
+  const [sectionTitle, setSectionTitle] = useState<string | null>(null)
+  
+  // Add CSS animation for section title
+  useEffect(() => {
+    // Create a style element for the animations
+    const styleElement = document.createElement('style')
+    styleElement.textContent = `
+      @keyframes fadeInOut {
+        0% { opacity: 0; transform: translateY(-20px); }
+        20% { opacity: 1; transform: translateY(0); }
+        80% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(20px); }
+      }
+      
+      .section-title-animation {
+        animation: fadeInOut 3s ease-in-out forwards;
+      }
+    `
+    document.head.appendChild(styleElement)
+    
+    return () => {
+      document.head.removeChild(styleElement)
+    }
+  }, [])
   
   // Handle name submission
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setShowNameModal(false)
     setGameStarted(true)
+    
+    // Display "Root Basin" title
+    console.log("Setting section title to 'Root Basin'")
+    setSectionTitle("Root Basin")
+    
+    // Hide the title after 3 seconds
+    setTimeout(() => {
+      console.log("Clearing section title")
+      setSectionTitle(null)
+    }, 3000)
   }
   
   // Create instructions panel with inline styles
@@ -2677,6 +2754,39 @@ const RumorWoods = () => {
 
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
+      {/* Section title display */}
+      {sectionTitle && (
+        <div 
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 9999, // Increase z-index to ensure it's on top
+            pointerEvents: "none",
+            fontFamily: "Arial, sans-serif",
+            fontSize: "96px",
+            fontWeight: "bold",
+            color: "white",
+            textShadow: "0 0 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 0, 0, 0.4)",
+            textAlign: "center",
+            letterSpacing: "3px",
+            width: "100vw",
+            height: "100vh",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            margin: 0,
+            padding: 0,
+            boxSizing: "border-box",
+            overflow: "hidden",
+            backgroundColor: "rgba(0,0,0,0.1)" // Add slight background for debugging
+          }}
+        >
+          <span>{sectionTitle}</span>
+        </div>
+      )}
+      
       {showNameModal && (
         <div style={{
           position: "fixed",
@@ -2699,7 +2809,7 @@ const RumorWoods = () => {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            maxWidth: "400px",
+            maxWidth: "550px",
             border: "3px solid #8a5a3c",
           }}>
             <h2 style={{
@@ -2720,9 +2830,16 @@ const RumorWoods = () => {
               textAlign: "center",
               lineHeight: "1.5",
             }}>
-              You&apos;ll be playing as a little Korok forest spirit exploring a magical realm.
-              <br />
-              Please enter your name:
+              You have awakened in the Root Basin of the Great Tree as a Seedling, 
+              a being drawn here during a critical moment in the tree&apos;s flowering cycle.
+              <br /><br />
+              As a little Korok forest spirit, you must ascend the colossal tree, 
+              collecting luminous sap and discovering lost memories. The tree&apos;s health depends on your journey.
+              <br /><br />
+              Your adventure begins here, at the base of the ancient tree. Look for platforms that will 
+              guide your climb toward the crown, where untold wonders await.
+              <br /><br />
+              Please enter your name, Seedling:
             </p>
             <form onSubmit={handleNameSubmit} style={{ width: "100%" }}>
               <input
@@ -2770,7 +2887,9 @@ const RumorWoods = () => {
               fontStyle: "italic",
               textAlign: "center",
             }}>
-              Use WASD to move and Mouse to look around!
+              Use WASD to move, Space to jump, and Mouse to look around!
+              <br />
+              Find the jumpable platforms and begin your climb to the great tree&apos;s crown!
             </div>
           </div>
         </div>
