@@ -2630,45 +2630,126 @@ const RumorWoods = () => {
   const [gameStarted, setGameStarted] = useState(false)
   const [sectionTitle, setSectionTitle] = useState<string | null>(null)
   
-  // Add CSS animation for section title
+  // Audio state
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(true);
+  const [audioLoaded, setAudioLoaded] = useState(false);
+  
+  // Initialize background music with correct path
   useEffect(() => {
-    // Create a style element for the animations
-    const styleElement = document.createElement('style')
-    styleElement.textContent = `
-      @keyframes fadeInOut {
-        0% { opacity: 0; transform: translateY(-20px); }
-        20% { opacity: 1; transform: translateY(0); }
-        80% { opacity: 1; transform: translateY(0); }
-        100% { opacity: 0; transform: translateY(20px); }
-      }
+    // Create audio element if it doesn't exist
+    if (!audioRef.current) {
+      console.log("Creating audio element");
       
-      .section-title-animation {
-        animation: fadeInOut 3s ease-in-out forwards;
-      }
-    `
-    document.head.appendChild(styleElement)
+      // Create a new audio element
+      const audio = new Audio();
+      audio.loop = true;
+      audio.volume = 0.5;
+      
+      // Set the source with the correct path
+      audio.src = '/soundtrack/intro-root-basin.mp3';
+      
+      // Add event listeners
+      audio.addEventListener('canplaythrough', () => {
+        console.log("Audio loaded and ready to play");
+        setAudioLoaded(true);
+        
+        // Try to play if music should be playing
+        if (isMusicPlaying) {
+          audio.play().catch(err => {
+            console.error("Auto-play prevented:", err);
+            // We'll try again after user interaction
+          });
+        }
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error("Audio error:", e);
+        console.error("Audio error code:", audio.error?.code);
+        console.error("Audio error message:", audio.error?.message);
+        
+        // Try alternative paths
+        console.log("Trying alternative paths");
+        // Try without leading slash
+        audio.src = 'soundtrack/intro-root-basin.mp3';
+      });
+      
+      // Store the audio element
+      audioRef.current = audio;
+    }
     
     return () => {
-      document.head.removeChild(styleElement)
-    }
-  }, [])
+      // Cleanup
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+    };
+  }, [isMusicPlaying]);
   
-  // Handle name submission
+  // Toggle music function
+  const toggleMusic = () => {
+    console.log("Toggle music called, current state:", isMusicPlaying);
+    
+    if (audioRef.current) {
+      if (isMusicPlaying) {
+        console.log("Pausing audio");
+        audioRef.current.pause();
+      } else {
+        console.log("Playing audio");
+        audioRef.current.play()
+          .then(() => console.log("Audio playback started from toggle"))
+          .catch(err => console.error("Audio playback error:", err));
+      }
+      
+      setIsMusicPlaying(!isMusicPlaying);
+    }
+  };
+  
+  // Handle name submission - this is when we have user interaction
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setShowNameModal(false)
     setGameStarted(true)
     
+    // Try to play audio after user interaction
+    console.log("Attempting to play audio after user interaction");
+    
+    if (audioRef.current) {
+      audioRef.current.play()
+        .then(() => {
+          console.log("Audio playback started successfully");
+          setIsMusicPlaying(true);
+          setAudioLoaded(true);
+        })
+        .catch(err => {
+          console.error("Audio playback error:", err);
+        });
+    }
+    
     // Display "Root Basin" title
-    console.log("Setting section title to 'Root Basin'")
     setSectionTitle("Root Basin")
     
     // Hide the title after 3 seconds
     setTimeout(() => {
-      console.log("Clearing section title")
       setSectionTitle(null)
     }, 3000)
   }
+  
+  // Add key listener for toggling music with 'M' key
+  useEffect(() => {
+    const handleMusicToggle = (e: KeyboardEvent) => {
+      if (e.key === 'm' || e.key === 'M') {
+        toggleMusic();
+      }
+    };
+    
+    window.addEventListener('keydown', handleMusicToggle);
+    
+    return () => {
+      window.removeEventListener('keydown', handleMusicToggle);
+    };
+  }, []);
   
   // Create instructions panel with inline styles
   useEffect(() => {
@@ -2752,43 +2833,6 @@ const RumorWoods = () => {
     };
   }, []);
 
-  // Background music
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isMusicPlaying, setIsMusicPlaying] = useState(true);
-  
-  // Initialize background music
-  useEffect(() => {
-    const audio = new Audio('/soundtrack/intro-root-basin.mp3');
-    audio.loop = true;
-    audio.volume = 0.5;
-    
-    // Try to play the audio
-    if (isMusicPlaying) {
-      audio.play().catch(err => console.error("Audio playback error:", err));
-    }
-    
-    // Store the audio element in ref for potential controls later
-    audioRef.current = audio;
-    
-    // Cleanup function to stop audio when component unmounts
-    return () => {
-      audio.pause();
-      audio.src = '';
-    };
-  }, [isMusicPlaying]); // Run when isMusicPlaying changes
-  
-  // Toggle music function
-  const toggleMusic = () => {
-    if (audioRef.current) {
-      if (isMusicPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play().catch(err => console.error("Audio playback error:", err));
-      }
-      setIsMusicPlaying(!isMusicPlaying);
-    }
-  };
-  
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
       {/* Audio controls */}
@@ -2824,7 +2868,7 @@ const RumorWoods = () => {
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            zIndex: 9999, // Increase z-index to ensure it's on top
+            zIndex: 9999,
             pointerEvents: "none",
             fontFamily: "Arial, sans-serif",
             fontSize: "96px",
@@ -2841,14 +2885,15 @@ const RumorWoods = () => {
             margin: 0,
             padding: 0,
             boxSizing: "border-box",
-            overflow: "hidden",
-            backgroundColor: "rgba(0,0,0,0.1)" // Add slight background for debugging
+            overflow: "hidden"
           }}
+          className="section-title-animation"
         >
           <span>{sectionTitle}</span>
         </div>
       )}
       
+      {/* Welcome modal with name input */}
       {showNameModal && (
         <div style={{
           position: "fixed",
@@ -2950,6 +2995,8 @@ const RumorWoods = () => {
               textAlign: "center",
             }}>
               Use WASD to move, Space to jump, and Mouse to look around!
+              <br />
+              Press M to toggle music on/off.
               <br />
               Find the jumpable platforms and begin your climb to the great tree&apos;s crown!
             </div>
