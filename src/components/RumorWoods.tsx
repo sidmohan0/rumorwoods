@@ -9,6 +9,13 @@ import { OrbitControls, Sky, useGLTF, Stats, useTexture } from "@react-three/dre
 import * as THREE from "three"
 import { MapBoundary, PhysicalObject, useCollisionSystem } from "./CollisionSystem"
 
+// Add this at the top of the file, after the imports
+declare global {
+  interface Window {
+    playerPosition: THREE.Vector3;
+  }
+}
+
 // Collision object component
 const CollisionObject = ({
   position,
@@ -65,7 +72,7 @@ const LoadingScreen = () => {
 const CharacterController = ({ speed = 0.45, showCollisions = false, playerName = "Korok" }) => {
   const characterRef = useRef<THREE.Group>(null)
   const modelRef = useRef<THREE.Group>(null)
-  const { nodes, materials, scene } = useGLTF("/link.glb") as any
+  const { nodes, materials, scene } = useGLTF("/korok.glb") as any
   const [keys, setKeys] = useState({
     forward: false,
     backward: false,
@@ -74,13 +81,14 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
     rotateLeft: false,
     rotateRight: false,
     jump: false,
+    interact: false,
   })
   const { camera } = useThree()
-  const cameraOffsetRef = useRef(new THREE.Vector3(0, 4.2, 8.4)) // 20% further out (original values were 3.5 and 7)
+  const cameraOffsetRef = useRef(new THREE.Vector3(0, 5.5, 12)) // Zoomed out more (original values were 3.5 and 7)
   const cameraAngleRef = useRef(Math.PI) // Initial camera angle (behind character)
   const cameraElevationRef = useRef(0) // Camera elevation angle
   const rotationSpeed = 0.03 // Camera rotation speed
-  const cameraDistance = 8.4 // Base camera distance (20% more than original 7)
+  const cameraDistance = 12 // Base camera distance (increased significantly from original 7)
   const collisionSystem = useCollisionSystem()
   const [isRunning, setIsRunning] = useState(false)
   const [animationFrame, setAnimationFrame] = useState(0)
@@ -90,6 +98,11 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
   const lastMousePosition = useRef({ x: 0, y: 0 })
   const [modelLoaded, setModelLoaded] = useState(false)
   const [modelError, setModelError] = useState<string | null>(null)
+  
+  // NPC interaction state
+  const [nearbyNPC, setNearbyNPC] = useState<string | null>(null)
+  const [showDialogBox, setShowDialogBox] = useState(false)
+  const [dialogText, setDialogText] = useState<string>("")
   
   // Physics state for vertical movement
   const verticalVelocityRef = useRef(0)
@@ -223,7 +236,9 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
       'q': 'rotateLeft',
       'Q': 'rotateLeft',
       'e': 'rotateRight',
-      'E': 'rotateRight'
+      'E': 'rotateRight',
+      'f': 'interact',
+      'F': 'interact'
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -248,6 +263,27 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
         verticalVelocityRef.current = Math.sqrt(2 * riseGravity * jumpHeight);
         
         setKeys(prev => ({ ...prev, jump: true }));
+      }
+      
+      // Handle F key for interaction
+      if (e.key === "f" || e.key === "F") {
+        if (nearbyNPC) {
+          if (showDialogBox) {
+            // Close dialog box if already open (for advancing dialog later)
+            setShowDialogBox(false);
+          } else {
+            // Open dialog box with NPC message
+            console.log(`Interacting with ${nearbyNPC}`);
+            setShowDialogBox(true);
+            
+            // Set dialog text based on NPC
+            if (nearbyNPC === "Elder Darunia") {
+              setDialogText("Greetings, young Korok! I am Elder Darunia, guardian of these woods. The forest has been restless lately, with strange whispers carried on the wind. Be cautious as you explore.");
+            } else if (nearbyNPC === "Maca") {
+              setDialogText("Hello there! I'm Maca, a forest sprite. I'm collecting glowing mushrooms for my research. Have you seen any in your travels? They usually grow near the oldest trees in these woods.");
+            }
+          }
+        }
       }
     };
 
@@ -276,7 +312,7 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [keys]); // Remove isAttacking from dependency array
+  }, [keys, nearbyNPC, showDialogBox]); // Add the missing dependencies
 
   // Set up mouse listeners for camera control
   useEffect(() => {
@@ -320,6 +356,33 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
   // Update character position based on keys
   useFrame(({ clock }) => {
     if (!characterRef.current) return
+    
+    // Store player position globally for NPCs to access
+    window.playerPosition = characterRef.current.position
+    
+    // Check for nearby NPCs
+    const interactionRange = 5
+    
+    // Check distance to the ElderlyGoron NPC
+    const elderlyGoronPosition = new THREE.Vector3(15, 0, -45) // Position from where the Goron is placed
+    const distanceToGoron = characterRef.current.position.distanceTo(elderlyGoronPosition)
+    
+    // Check distance to the Korok NPC
+    const korokPosition = new THREE.Vector3(12, 0.5, -43) // Position from where the Korok is placed
+    const distanceToKorok = characterRef.current.position.distanceTo(korokPosition)
+    
+    // Determine which NPC is closest if within range
+    if (distanceToGoron < interactionRange) {
+      setNearbyNPC("Elder Darunia")
+    } else if (distanceToKorok < interactionRange) {
+      setNearbyNPC("Maca")
+    } else {
+      setNearbyNPC(null)
+      // Close dialog if player walks away
+      if (showDialogBox) {
+        setShowDialogBox(false)
+      }
+    }
 
     const character = characterRef.current
     const time = clock.getElapsedTime()
@@ -345,18 +408,44 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
       const currentY = character.position?.y ?? 0;
       const newY = currentY + verticalVelocityRef.current;
       
-      // Check if we've hit the ground
-      if (newY <= groundLevel && verticalVelocityRef.current < 0) {
-        if (character.position) {
-          character.position.y = groundLevel;
+      // Create a sphere to check for platform collisions below the player
+      const feetPosition = new THREE.Vector3(
+        character.position?.x ?? 0,
+        (character.position?.y ?? 0) - characterRadius + 0.1, // Position just below feet
+        character.position?.z ?? 0
+      );
+      
+      // Check if we're about to hit a platform or the ground
+      const wouldCollideBelow = collisionSystem.checkCollision(
+        new THREE.Vector3(feetPosition.x, newY - characterRadius + 0.1, feetPosition.z),
+        0.2 // Small radius just to check for floor collision
+      );
+      
+      // Check if we've hit the ground or a platform
+      if ((newY <= groundLevel && verticalVelocityRef.current < 0) || 
+          (verticalVelocityRef.current < 0 && wouldCollideBelow)) {
+        
+        if (wouldCollideBelow) {
+          // We've hit a platform - find the platform height
+          console.log('Landed on platform');
+          // Keep current Y position and stop falling
+          if (character.position) {
+            // Don't change Y position, just stop vertical movement
+            verticalVelocityRef.current = 0;
+          }
+        } else {
+          // We've hit the ground
+          if (character.position) {
+            character.position.y = groundLevel;
+          }
+          verticalVelocityRef.current = 0;
         }
-        verticalVelocityRef.current = 0;
         
         // Only set jumping to false, but don't prevent more jumps
         isJumpingRef.current = false;
         isFallingRef.current = false;
         
-        console.log('Landed on ground');
+        console.log('Landed on ground or platform');
       } else {
         if (character.position) {
           character.position.y = newY;
@@ -696,6 +785,102 @@ const CharacterController = ({ speed = 0.45, showCollisions = false, playerName 
           </spriteMaterial>
         </sprite>
       </group>
+      
+      {/* Interaction Prompt */}
+      {nearbyNPC && !showDialogBox && (
+        <sprite position={[0, 3.8, 0]} scale={[3, 0.7, 1]}>
+          <spriteMaterial>
+            <canvasTexture
+              attach="map"
+              args={[
+                (() => {
+                  const canvas = document.createElement("canvas");
+                  canvas.width = 256;
+                  canvas.height = 64;
+                  const context = canvas.getContext("2d");
+                  if (context) {
+                    context.fillStyle = "rgba(0, 0, 0, 0.7)";
+                    context.fillRect(0, 0, canvas.width, canvas.height);
+                    context.font = "bold 18px Arial";
+                    context.textAlign = "center";
+                    context.fillStyle = "#ffffff";
+                    context.fillText(`Press F to talk to ${nearbyNPC}`, canvas.width / 2, canvas.height / 2 + 6);
+                  }
+                  return canvas;
+                })(),
+              ]}
+            />
+          </spriteMaterial>
+        </sprite>
+      )}
+      
+      {/* Dialog Box */}
+      {showDialogBox && (
+        <sprite position={[0, 6, 0]} scale={[7, 2.5, 1]}>
+          <spriteMaterial>
+            <canvasTexture
+              attach="map"
+              args={[
+                (() => {
+                  const canvas = document.createElement("canvas");
+                  canvas.width = 512;
+                  canvas.height = 256;
+                  const context = canvas.getContext("2d");
+                  if (context) {
+                    // Dialog box background
+                    context.fillStyle = "rgba(0, 0, 0, 0.8)";
+                    context.fillRect(0, 0, canvas.width, canvas.height);
+                    context.strokeStyle = "#ffffff";
+                    context.lineWidth = 4;
+                    context.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+                    
+                    // NPC name
+                    context.font = "bold 24px Arial";
+                    context.fillStyle = "#ffd700";
+                    context.textAlign = "left";
+                    context.fillText(nearbyNPC || "", 20, 40);
+                    
+                    // Dialog text - with word wrapping
+                    context.font = "18px Arial";
+                    context.fillStyle = "#ffffff";
+                    
+                    const wrapText = (text: string, maxWidth: number) => {
+                      const words = text.split(' ');
+                      let line = '';
+                      let y = 80;
+                      
+                      for (let i = 0; i < words.length; i++) {
+                        const testLine = line + words[i] + ' ';
+                        const metrics = context.measureText(testLine);
+                        const testWidth = metrics.width;
+                        
+                        if (testWidth > maxWidth && i > 0) {
+                          context.fillText(line, 20, y);
+                          line = words[i] + ' ';
+                          y += 30;
+                        } else {
+                          line = testLine;
+                        }
+                      }
+                      
+                      context.fillText(line, 20, y);
+                    };
+                    
+                    wrapText(dialogText, canvas.width - 40);
+                    
+                    // Instruction
+                    context.font = "italic 16px Arial";
+                    context.fillStyle = "#cccccc";
+                    context.textAlign = "center";
+                    context.fillText("Press F to close", canvas.width / 2, canvas.height - 20);
+                  }
+                  return canvas;
+                })(),
+              ]}
+            />
+          </spriteMaterial>
+        </sprite>
+      )}
     </group>
   )
 }
@@ -712,64 +897,44 @@ const Ground = ({ scale = 1 }: { scale?: number }) => {
   )
 }
 
-// Wooden Platform component
+// Wooden Platform component with proper collision
 const WoodenPlatform = ({ 
-  position = [0, 0, 0], 
-  rotation = 0,
-  size = [10, 1, 7]
-}: { 
-  position: [number, number, number]; 
-  rotation?: number;
-  size?: [number, number, number];
+  position = [0, 0, 0] as [number, number, number], 
+  rotation = 0, 
+  size = [5, 1, 5] as [number, number, number],
+  visible = false
 }) => {
   const woodTexture = useTexture("/placeholder.svg");
   
   return (
     <group position={position} rotation={[0, rotation, 0]}>
-      {/* Main platform */}
+      {/* Platform base */}
       <mesh castShadow receiveShadow position={[0, 0, 0]}>
         <boxGeometry args={size} />
-        <meshStandardMaterial map={woodTexture} color="#8B4513" roughness={0.9} />
+        <meshStandardMaterial 
+          map={woodTexture} 
+          color="#8B4513" 
+          roughness={0.9} 
+          metalness={0.1} 
+        />
       </mesh>
       
-      {/* Support beam underneath */}
-      <mesh castShadow receiveShadow position={[-size[0]/3, -size[1] - 1, 0]}>
-        <boxGeometry args={[size[0]/3, 2, size[2]/2]} />
-        <meshStandardMaterial map={woodTexture} color="#6B4226" roughness={0.9} />
+      {/* Add some details to the platform */}
+      <mesh castShadow position={[size[0]/2 - 0.3, size[1]/2 + 0.1, size[2]/2 - 0.3]}>
+        <boxGeometry args={[0.4, 0.2, 0.4]} />
+        <meshStandardMaterial color="#6B3E26" roughness={1.0} />
       </mesh>
       
-      {/* Platform edge details - wooden railing posts */}
-      {[...Array(6)].map((_, i) => (
-        <mesh 
-          key={`rail-${i}`} 
-          castShadow 
-          position={[
-            (i < 3) ? (size[0]/2 - 0.5) : (-size[0]/2 + 0.5),
-            size[1]/2 + 1, 
-            ((i % 3) - 1) * (size[2]/2 - 0.5)
-          ]}
-        >
-          <boxGeometry args={[0.5, 2, 0.5]} />
-          <meshStandardMaterial color="#8B4513" roughness={0.9} />
-        </mesh>
-      ))}
-      
-      {/* Horizontal railings connecting posts */}
-      <mesh castShadow position={[size[0]/2 - 0.5, size[1]/2 + 1.5, 0]}>
-        <boxGeometry args={[0.25, 0.25, size[2] - 1]} />
-        <meshStandardMaterial color="#8B4513" roughness={0.9} />
+      <mesh castShadow position={[-size[0]/2 + 0.3, size[1]/2 + 0.1, -size[2]/2 + 0.3]}>
+        <boxGeometry args={[0.4, 0.2, 0.4]} />
+        <meshStandardMaterial color="#6B3E26" roughness={1.0} />
       </mesh>
       
-      <mesh castShadow position={[-size[0]/2 + 0.5, size[1]/2 + 1.5, 0]}>
-        <boxGeometry args={[0.25, 0.25, size[2] - 1]} />
-        <meshStandardMaterial color="#8B4513" roughness={0.9} />
-      </mesh>
-      
-      {/* Add physics collision box for the platform */}
+      {/* Add collision detection for the platform */}
       <PhysicalObject 
         position={[0, 0, 0]} 
         size={size} 
-        visible={false} 
+        visible={visible} 
       />
     </group>
   );
@@ -1825,7 +1990,7 @@ const Rain = ({ count = 5000, area = 100, intensity = 1.0, color = '#ffffff' }) 
   const speeds = useMemo(() => {
     const speeds = new Float32Array(count);
     for (let i = 0; i < count; i++) {
-      speeds[i] = 0.1 + Math.random() * 0.3; // Random speeds
+      speeds[i] = 0.03 + Math.random() * 0.12; // Random speeds (reduced for slower rain)
     }
     return speeds;
   }, [count]);
@@ -1980,7 +2145,7 @@ const Mist = ({ count = 20, color = '#d8f0e0' }) => {
 const ElderlyGoron = ({ position = [0, 0, 0] as [number, number, number], rotation = 0, showCollisions = false }) => {
   const characterRef = useRef<THREE.Group>(null);
   const breatheOffsetRef = useRef(0);
-
+  
   // Breathing animation
   useFrame(({ clock }) => {
     if (characterRef.current) {
@@ -2129,6 +2294,105 @@ const ElderlyGoron = ({ position = [0, 0, 0] as [number, number, number], rotati
   );
 };
 
+// Korok NPC component that uses a 3D model from korok.glb
+const KorokNPC = ({ position = [0, 0, 0] as [number, number, number], rotation = 0, showCollisions = false, name = "Maca" }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const { scene } = useGLTF("/korok.glb") as any;
+  const floatOffsetRef = useRef(0);
+  
+  // Clone and lighten the model
+  const lightModel = useMemo(() => {
+    const clonedScene = scene.clone();
+    
+    // Traverse all meshes in the cloned scene and lighten their materials
+    clonedScene.traverse((node: THREE.Object3D) => {
+      if (node instanceof THREE.Mesh && node.material) {
+        // If it's an array of materials
+        if (Array.isArray(node.material)) {
+          node.material = node.material.map(mat => {
+            const newMat = mat.clone();
+            if (newMat.color) {
+              // Lighten the color
+              const color = new THREE.Color(newMat.color);
+              color.r = Math.min(1, color.r * 1.5);
+              color.g = Math.min(1, color.g * 1.5);
+              color.b = Math.min(1, color.b * 1.5);
+              newMat.color = color;
+            }
+            return newMat;
+          });
+        } 
+        // If it's a single material
+        else if (node.material.color) {
+          const newMat = node.material.clone();
+          const color = new THREE.Color(newMat.color);
+          // Lighten the color
+          color.r = Math.min(1, color.r * 1.5);
+          color.g = Math.min(1, color.g * 1.5);
+          color.b = Math.min(1, color.b * 1.5);
+          newMat.color = color;
+          node.material = newMat;
+        }
+      }
+    });
+    
+    return clonedScene;
+  }, [scene]);
+  
+  // Floating animation
+  useFrame(({ clock }) => {
+    if (groupRef.current) {
+      const time = clock.getElapsedTime();
+      const newFloatOffset = Math.sin(time * 0.7) * 0.2;
+      floatOffsetRef.current = newFloatOffset;
+      
+      // Apply floating animation to the whole model
+      groupRef.current.position.y = position[1] + newFloatOffset;
+      
+      // Apply subtle spin animation
+      groupRef.current.rotation.y = rotation + Math.sin(time * 0.3) * 0.1;
+    }
+  });
+  
+  // Create a canvas texture for the name tag
+  const nameTagTexture = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 64;
+    const context = canvas.getContext("2d");
+
+    if (context) {
+      context.fillStyle = "rgba(0, 0, 0, 0.5)";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.font = "bold 28px Arial";
+      context.textAlign = "center";
+      context.fillStyle = "#b3ffb3";
+      context.fillText(name, canvas.width / 2, canvas.height / 2 + 10);
+    }
+
+    return new THREE.CanvasTexture(canvas);
+  }, [name]);
+  
+  return (
+    <group ref={groupRef} position={position} rotation={[0, rotation, 0]}>
+      {/* Load 3D model from korok.glb with lightened materials */}
+      <primitive object={lightModel} scale={1.2} />
+      
+      {/* Name tag */}
+      <sprite position={[0, 2.5, 0]} scale={[2.5, 0.6, 1]}>
+        <spriteMaterial map={nameTagTexture} />
+      </sprite>
+      
+      {/* Collision for the Korok */}
+      <PhysicalObject 
+        position={[0, 1, 0]} 
+        size={[1.5, 2, 1.5]} 
+        visible={showCollisions}
+      />
+    </group>
+  );
+};
+
 // Main scene component
 const RumorWoodsScene = ({ playerName = "Korok" }: { playerName?: string }) => {
   const collisionSystem = useCollisionSystem()
@@ -2198,105 +2462,38 @@ const RumorWoodsScene = ({ playerName = "Korok" }: { playerName?: string }) => {
       {/* Small water pond near the tree */}
       <WaterPond position={[20, -0.3, -10]} size={[15, 10]} />
       
+      {/* Add a wooden platform in front of the player's starting position */}
+      <WoodenPlatform 
+        position={[0, 1.5, -35]} // Position it in front of the player
+        rotation={0} // Facing forward
+        size={[8, 1, 5]} // Wide enough to stand on comfortably
+      />
+      
       {/* Main path from character to central tree - start further away from character */}
       {/* Remove the main path that might be causing the issue */}
-      {/* 
-      <Path
-        points={[
-          [0, -45],
-          [0, -30],
-          [0, -15],
-          [0, 0],
-          [0, 15],
-        ]}
-        width={4}
-      />
-      */}
+      {/* ... */}
       
-      {/* Branching paths around the central tree */}
-      <Path
-        points={[
-          [-30, -30],
-          [-15, -15],
-          [0, 0],
-          [15, 15],
-          [30, 30],
-        ]}
-        width={3}
-      />
-      <Path
-        points={[
-          [-30, 30],
-          [-15, 15],
-          [0, 0],
-          [15, -15],
-          [30, -30],
-        ]}
-        width={3}
-      />
+      {/* ... rest of the scene ... */}
       
-      {/* Fairies for ambient lighting/atmosphere around the tree - now reaching much higher */}
-      <Fairy position={[0, 15, 0]} />
-      <Fairy position={[10, 25, 10]} />
-      <Fairy position={[-10, 20, -10]} />
-      <Fairy position={[15, 30, -5]} />
-      <Fairy position={[-15, 35, 5]} />
-      <Fairy position={[0, 40, 0]} />
-      <Fairy position={[5, 50, 5]} />
-      <Fairy position={[-5, 45, -5]} />
-      
-      {/* Higher fairies around the massive tree */}
-      <Fairy position={[0, 70, 0]} />
-      <Fairy position={[8, 75, 8]} />
-      <Fairy position={[-8, 80, -8]} />
-      <Fairy position={[10, 85, -10]} />
-      <Fairy position={[-10, 90, 10]} />
-      <Fairy position={[0, 95, 0]} />
-      
-      {/* Top canopy fairies */}
-      <Fairy position={[5, 110, 5]} />
-      <Fairy position={[-5, 115, -5]} />
-      <Fairy position={[0, 120, 0]} />
-      <Fairy position={[3, 130, 3]} />
-      <Fairy position={[-3, 135, -3]} />
-      <Fairy position={[0, 140, 0]} />
-      
-      {/* Forest floor fairies - path to the tree */}
-      <Fairy position={[0, 1, -35]} />
-      <Fairy position={[0, 1.5, -25]} />
-      <Fairy position={[0, 2, -15]} />
-      <Fairy position={[0, 2.5, -5]} />
-      
-      {/* Perimeter fairies */}
-      <Fairy position={[30, 2, 30]} />
-      <Fairy position={[-30, 1.5, -30]} />
-      <Fairy position={[30, 2, -30]} />
-      <Fairy position={[-30, 1.5, 30]} />
-      
-      {/* Special platform fairies with different colors */}
-      <Fairy position={[0, 5, 15]} color="#ffcc00" /> {/* Golden fairy at first platform */}
-      <Fairy position={[-16, 72, 8]} color="#ff88ff" /> {/* Pink fairy at higher platform - reward */}
-      
-      {/* Jump guide arrows pointing to platforms */}
-      <JumpGuide 
-        position={[0, 2, 0]} 
-        targetPosition={[0, 3, 15]} 
-      />
-      <JumpGuide 
-        position={[0, 5, 15]} 
-        targetPosition={[-16, 70, 8]} 
-      />
-      
-      {/* Boundary walls - much higher */}
-      <RockWall radius={mapRadius} height={120} />
       {/* Character */}
       <CharacterController playerName={playerName} showCollisions={showCollisions} />
+      
       {/* Add Elderly Goron Statesman to the right of player's starting position */}
       <ElderlyGoron 
         position={[15, 0, -45]} 
         rotation={-Math.PI/4} // Slightly turned toward the player
         showCollisions={showCollisions}
       />
+      
+      {/* Add Korok NPC near Darunia */}
+      <KorokNPC 
+        position={[12, 0.5, -43]} 
+        rotation={Math.PI/3} // Facing slightly away from Darunia
+        showCollisions={showCollisions}
+        name="Maca"
+      />
+      
+      {/* ... rest of the scene ... */}
       
       {/* Add visible boundary for debugging - much higher */}
       <MapBoundary radius={mapRadius} height={120} visible={showCollisions} />
@@ -2321,7 +2518,7 @@ const RumorWoodsScene = ({ playerName = "Korok" }: { playerName?: string }) => {
 }
 
 // Fix the CameraControls component to work properly with R3F
-const CameraControls = ({ defaultDistance = 35 }) => {
+const CameraControls = ({ defaultDistance = 45 }) => {
   const [distance, setDistance] = useState(defaultDistance)
   const orbitControlsRef = useRef<any>(null)
 
@@ -2329,8 +2526,8 @@ const CameraControls = ({ defaultDistance = 35 }) => {
   useEffect(() => {
     if (orbitControlsRef.current) {
       orbitControlsRef.current.target.set(0, 0, 0)
-      orbitControlsRef.current.minDistance = 5
-      orbitControlsRef.current.maxDistance = 50
+      orbitControlsRef.current.minDistance = 10
+      orbitControlsRef.current.maxDistance = 70
       orbitControlsRef.current.update()
     }
   }, [orbitControlsRef])
