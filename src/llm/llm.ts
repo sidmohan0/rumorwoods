@@ -16,8 +16,16 @@ export interface CompletionOptions {
   stop?: string[];
 }
 
+export interface UsageStats {
+  calls: number;
+  promptTokens: number;
+  completionTokens: number;
+}
+
 export interface LLMBackend {
   readonly name: string;
+  /** Cumulative token usage, when the backend reports it. */
+  readonly usage?: UsageStats;
   chat(messages: ChatMessage[], options?: CompletionOptions): Promise<string>;
 }
 
@@ -38,6 +46,11 @@ function stripThinking(text: string): string {
 
 export class WebLLMBackend implements LLMBackend {
   readonly name: string;
+  readonly usage: UsageStats = {
+    calls: 0,
+    promptTokens: 0,
+    completionTokens: 0,
+  };
   private engine: MLCEngineInterface | null = null;
   private modelId: string;
   private onProgress?: (report: InitProgressReport) => void;
@@ -75,6 +88,9 @@ export class WebLLMBackend implements LLMBackend {
       stop: options.stop,
       extra_body: { enable_thinking: false },
     });
+    this.usage.calls++;
+    this.usage.promptTokens += reply.usage?.prompt_tokens ?? 0;
+    this.usage.completionTokens += reply.usage?.completion_tokens ?? 0;
     return stripThinking(reply.choices[0]?.message?.content ?? "");
   }
 }
@@ -85,6 +101,11 @@ export class WebLLMBackend implements LLMBackend {
  */
 export class OpenAICompatBackend implements LLMBackend {
   readonly name: string;
+  readonly usage: UsageStats = {
+    calls: 0,
+    promptTokens: 0,
+    completionTokens: 0,
+  };
   private baseUrl: string;
   private model: string;
   private apiKey?: string;
@@ -120,6 +141,9 @@ export class OpenAICompatBackend implements LLMBackend {
       throw new Error(`LLM server error ${res.status}: ${await res.text()}`);
     }
     const data = await res.json();
+    this.usage.calls++;
+    this.usage.promptTokens += data.usage?.prompt_tokens ?? 0;
+    this.usage.completionTokens += data.usage?.completion_tokens ?? 0;
     return stripThinking(data.choices?.[0]?.message?.content ?? "");
   }
 }
@@ -146,9 +170,16 @@ export class LLMQueue {
     return this.backend.name;
   }
 
+  get usage(): UsageStats | undefined {
+    return this.backend.usage;
+  }
+
   get pending(): number {
     return this.active + this.queue.length;
   }
+
+  /** Wall-clock latency of every completed call, in ms. */
+  readonly latenciesMs: number[] = [];
 
   async chat(
     messages: ChatMessage[],
@@ -160,8 +191,11 @@ export class LLMQueue {
     this.active++;
     this.callCount++;
     this.emitStats();
+    const started = performance.now();
     try {
-      return await this.backend.chat(messages, options);
+      const result = await this.backend.chat(messages, options);
+      this.latenciesMs.push(performance.now() - started);
+      return result;
     } finally {
       this.active--;
       const next = this.queue.shift();

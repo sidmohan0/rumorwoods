@@ -11,9 +11,13 @@ import { World } from "./world/world";
 import { SMALLVILLE_MAP } from "./data/map";
 import { PERSONAS } from "./data/personas";
 import { Engine } from "./sim/engine";
+import { runGameDay, SeedStats } from "./sim/benchmark";
 import { Renderer } from "./ui/renderer";
 import { Inspector } from "./ui/inspector";
 import { formatTime } from "./core/prompts";
+
+/** ?bench=1 runs one game day and produces a downloadable report. */
+const BENCH = new URLSearchParams(location.search).has("bench");
 
 const canvas = document.getElementById("map") as HTMLCanvasElement;
 const clockEl = document.getElementById("clock")!;
@@ -55,11 +59,17 @@ engine.onTick = () => {
   inspector.render();
 };
 
-engine.onLog = (entry) => {
+function logLine(entry: string): void {
   const div = document.createElement("div");
   div.textContent = `[${formatTime(engine.time)}] ${entry}`;
   logEl.prepend(div);
   while (logEl.children.length > 300) logEl.lastChild!.remove();
+}
+
+let benchErrorsThisTick = 0;
+engine.onLog = (entry) => {
+  if (entry.startsWith("[error]")) benchErrorsThisTick++;
+  logLine(entry);
 };
 
 function placeholderBackend() {
@@ -108,18 +118,82 @@ btnLoad.addEventListener("click", () => {
       llmStatusEl.textContent = llm.backendName;
 
       progressEl.textContent = "Seeding the agents' memory streams…";
+      const seedStart = Date.now();
+      const seedBefore = llm.usage ? { ...llm.usage } : null;
       await engine.seed();
+      const seedStats: SeedStats | undefined =
+        seedBefore && llm.usage
+          ? {
+              wallMs: Date.now() - seedStart,
+              calls: llm.usage.calls - seedBefore.calls,
+              promptTokens: llm.usage.promptTokens - seedBefore.promptTokens,
+              completionTokens:
+                llm.usage.completionTokens - seedBefore.completionTokens,
+              totalTokens:
+                llm.usage.promptTokens +
+                llm.usage.completionTokens -
+                seedBefore.promptTokens -
+                seedBefore.completionTokens,
+            }
+          : undefined;
 
       overlayEl.style.display = "none";
-      btnStart.disabled = false;
-      btnPause.disabled = false;
-      engine.start();
+      if (BENCH) {
+        void runBenchmark(seedStats);
+      } else {
+        btnStart.disabled = false;
+        btnPause.disabled = false;
+        engine.start();
+      }
     } catch (err) {
       progressEl.textContent = String(err);
       btnLoad.disabled = false;
     }
   })();
 });
+
+async function runBenchmark(seed?: SeedStats): Promise<void> {
+  logLine("[bench] running one game day (6:00 am → 6:00 am)…");
+  btnStart.disabled = true;
+  btnPause.disabled = true;
+  try {
+    const report = await runGameDay(engine, llm, llm.backendName, {
+      seed,
+      yieldBetweenTicks: true,
+      errorsInLastTick: () => {
+        const n = benchErrorsThisTick;
+        benchErrorsThisTick = 0;
+        return n;
+      },
+      onHour: (h) => {
+        logLine(
+          `[bench] sim ${h.simTime} | wall ${(h.wallMs / 60000).toFixed(1)} min | ` +
+            `${h.calls} calls | ${(h.totalTokens / 1e6).toFixed(2)}M tokens`,
+        );
+      },
+    });
+    logLine(
+      `[bench] DONE — ${report.gameDay.calls} calls, ` +
+        `${(report.gameDay.totalTokens / 1e6).toFixed(2)}M tokens, ` +
+        `${report.gameDay.wallHours}h wall (${report.gameDay.simToRealRatio}x real time), ` +
+        `${(
+          (report.gameDay.totalTokens / report.baseline.tokensPerGameDay) *
+          100
+        ).toFixed(1)}% of the GPT-3.5 baseline's tokens`,
+    );
+    console.log("[bench] report", report);
+    const blob = new Blob([JSON.stringify(report, null, 2)], {
+      type: "application/json",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `rumorwoods-bench-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (err) {
+    logLine(`[bench] FAILED: ${String(err)}`);
+  }
+}
 
 btnStart.addEventListener("click", () => engine.start());
 btnPause.addEventListener("click", () => engine.pause());
