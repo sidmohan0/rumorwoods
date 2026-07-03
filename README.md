@@ -1,0 +1,78 @@
+# Rumorwoods
+
+A faithful, **fully in-browser** reimplementation of
+[*Generative Agents: Interactive Simulacra of Human Behavior*](https://arxiv.org/abs/2304.03442)
+(Park et al., UIST '23).
+
+Twenty-five agents live out their days in Smallville — perceiving, remembering,
+retrieving, reflecting, planning, and conversing — with **all cognition driven by a
+real LLM**. No server, no API keys, no mocks.
+
+- **LLM**: Qwen2.5-7B-Instruct running on your GPU via [WebLLM](https://github.com/mlc-ai/web-llm)
+  (WebGPU). Smaller Qwen variants selectable for lighter GPUs. Optionally, point the app
+  at a local llama.cpp / Ollama OpenAI-compatible endpoint instead.
+- **Embeddings**: all-MiniLM-L6-v2 in-browser via transformers.js, for memory-retrieval
+  relevance scoring.
+- **UI**: top-down tile map of Smallville with emoji status bubbles; click any agent to
+  inspect their memory stream, plans, and conversations — and interview them, as in the
+  paper.
+
+## Running
+
+```bash
+npm install
+npm run dev
+```
+
+Open the printed URL in a WebGPU-capable browser (Chrome/Edge 113+). Pick a model and
+click **Load model & begin**. The first load downloads the model weights (several GB for
+the 7B model); they are cached by the browser afterwards.
+
+To use a local server instead (any OpenAI-compatible `/v1/chat/completions` endpoint):
+
+```bash
+# llama.cpp
+llama-server -m qwen2.5-7b-instruct-q4_k_m.gguf --port 8080
+# or Ollama (also expose CORS: OLLAMA_ORIGINS='*' ollama serve)
+ollama run qwen2.5:7b-instruct
+```
+
+then select "Local llama.cpp / Ollama server" on the start screen.
+
+## Architecture (paper section → module)
+
+| Paper component | Module |
+| --- | --- |
+| Memory stream & retrieval (recency · importance · relevance) — §4.1 | `src/core/memory.ts` |
+| Reflection (focal questions → insights with evidence) — §4.2 | `Agent.reflect` in `src/core/agent.ts` |
+| Planning (broad strokes → hourly → 5–15 min) & re-planning — §4.3 | `Agent.ensureDayPlan` / `decomposeBlock` |
+| Perceive → retrieve → react loop — §4.3.1 | `Agent.step` / `perceive` / `maybeReact` |
+| Dialogue conditioned on memory — §4.3.2 | `Agent.startConversation` / `takeDialogueTurn` |
+| Agent summary description — Appendix A | `Agent.summaryDescription` |
+| New-day identity revision ("currently" rewrite) | `Agent.reviseIdentity` |
+| Sandbox world, areas/objects tree, A* pathfinding — §3 | `src/world/world.ts`, `src/data/map.ts` |
+| The 25 Smallville personas & seed memories — §5 | `src/data/personas.ts` |
+| Agent interviews — §3 | Inspector "Interview" panel |
+| Information diffusion (Valentine's party) — §6 | emerges via dialogue; Isabella's seed memory |
+
+## Gap analysis vs. the official implementation
+
+Compared against [joonspk-research/generative_agents](https://github.com/joonspk-research/generative_agents)
+(the paper's released code) for functional parity. Covered: memory stream with
+importance scoring at write time; retrieval with min-max-normalized recency (0.995
+decay) / importance / relevance and equal weights; reflection triggered at importance
+sum ≥ 150 with focal questions, per-question retrieval, and evidence-cited insights;
+hierarchical planning with lazy decomposition; perception with vision radius,
+attention bandwidth (3), and event dedup vs. latest memory; reaction decision from a
+summarized relationship + observation context; dialogue with per-turn retrieval and
+end-detection; post-conversation memo and planning thoughts; new-day identity
+revision; object state updates from agent actions; emoji "pronunciatio"; and
+interviews.
+
+Intentional differences: natural-language memory descriptions are used directly for
+dedup/keying instead of (subject, predicate, object) triples; reaction asks the LLM
+for react/how in one prompt rather than separate decide-to-talk / decide-to-react
+prompts; the wait-reaction mode ("should I wait for the bathroom to free up") is
+folded into the general reaction path; spatial memory is global (agents know the town
+map) rather than incrementally discovered; and there is no server/replay layer since
+the sim runs live in the browser.
