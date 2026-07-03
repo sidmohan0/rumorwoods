@@ -1,6 +1,6 @@
 import { LLMQueue } from "../llm/llm";
 import { World } from "../world/world";
-import { MemoryStream } from "./memory";
+import { bumpNextMemoryId, MemoryStream } from "./memory";
 import {
   Conversation,
   DayPlan,
@@ -64,6 +64,28 @@ export interface CurrentAction {
   endsAt: number;
 }
 
+/** Serialized mutable agent state (session save/load). */
+export interface AgentState {
+  name: string;
+  x: number;
+  y: number;
+  path: Array<{ x: number; y: number }>;
+  action: CurrentAction;
+  emoji: string;
+  asleep: boolean;
+  dayPlan: DayPlan | null;
+  currently: string;
+  conversationLog: Conversation[];
+  conversationPartnerName: string | null;
+  conversation: Conversation | null;
+  summaryCache: { day: number; text: string } | null;
+  reactCooldowns: Array<[string, number]>;
+  memory: {
+    importanceSinceReflection: number;
+    nodes: MemoryNode[];
+  };
+}
+
 export class Agent {
   readonly persona: Persona;
   readonly memory = new MemoryStream();
@@ -105,6 +127,57 @@ export class Agent {
 
   get name(): string {
     return this.persona.name;
+  }
+
+  /** Snapshot of all mutable state, for session save (see sim/session.ts). */
+  serialize(): AgentState {
+    return {
+      name: this.name,
+      x: this.x,
+      y: this.y,
+      path: this.path.map((p) => ({ ...p })),
+      action: { ...this.action },
+      emoji: this.emoji,
+      asleep: this.asleep,
+      dayPlan: this.dayPlan ? structuredClone(this.dayPlan) : null,
+      currently: this.currently,
+      conversationLog: structuredClone(this.conversationLog),
+      conversationPartnerName: this.conversationPartner?.name ?? null,
+      conversation: this.conversation ? structuredClone(this.conversation) : null,
+      summaryCache: this.summaryCache ? { ...this.summaryCache } : null,
+      reactCooldowns: [...this.reactCooldowns.entries()],
+      memory: {
+        importanceSinceReflection: this.memory.importanceSinceReflection,
+        nodes: this.memory.nodes.map((n) => ({ ...n })),
+      },
+    };
+  }
+
+  /**
+   * Restore a snapshot. Conversation partner references are re-linked
+   * afterwards by the session loader (they need shared object identity
+   * across the pair).
+   */
+  restore(state: AgentState): void {
+    this.x = state.x;
+    this.y = state.y;
+    this.path = state.path.map((p) => ({ ...p }));
+    this.action = { ...state.action };
+    this.emoji = state.emoji;
+    this.asleep = state.asleep;
+    this.dayPlan = state.dayPlan ? structuredClone(state.dayPlan) : null;
+    this.currently = state.currently;
+    this.conversationLog = structuredClone(state.conversationLog);
+    this.conversation = null;
+    this.conversationPartner = null;
+    this.summaryCache = state.summaryCache ? { ...state.summaryCache } : null;
+    this.reactCooldowns = new Map(state.reactCooldowns);
+    this.memory.importanceSinceReflection =
+      state.memory.importanceSinceReflection;
+    this.memory.nodes = state.memory.nodes.map((n) => ({ ...n }));
+    let maxId = 0;
+    for (const n of this.memory.nodes) maxId = Math.max(maxId, n.id);
+    bumpNextMemoryId(maxId);
   }
 
   /** Seed the memory stream from the persona description (paper section 5). */

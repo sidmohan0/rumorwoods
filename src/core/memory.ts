@@ -9,6 +9,11 @@ const W_RELEVANCE = 1;
 
 let nextId = 1;
 
+/** Keep fresh node ids unique after restoring a saved session. */
+export function bumpNextMemoryId(maxUsedId: number): void {
+  if (maxUsedId >= nextId) nextId = maxUsedId + 1;
+}
+
 export class MemoryStream {
   nodes: MemoryNode[] = [];
   /** Running sum of importance since the last reflection (paper threshold: 150). */

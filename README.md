@@ -16,6 +16,9 @@ real LLM**.
 - **UI**: top-down tile map of Smallville with emoji status bubbles; click any agent to
   inspect their memory stream, plans, and conversations — and interview them, as in the
   paper.
+- **Sessions**: save and resume simulations entirely in the browser
+  (IndexedDB) — full agent memory streams with embeddings, plans, positions,
+  conversations, and object states. Any backend can resume any session.
 - **Map**: the actual "the Ville" layout from the official repository — all 19 sectors,
   63 arenas, per-tile collision, and object placement are converted from its Apache-2.0
   tile-matrix data by `tools/build-ville-map.mjs` (source CSVs in `tools/ville-data/`).

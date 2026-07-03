@@ -19,6 +19,7 @@
         <div id="controls">
           <button id="btn-start" disabled>Start</button>
           <button id="btn-pause" disabled>Pause</button>
+          <button id="btn-save" disabled>Save</button>
           <button id="btn-settings">Settings</button>
         </div>
         <div id="llm-status">model not loaded</div>
@@ -26,35 +27,6 @@
       <main id="layout">
         <div id="map-container">
           <canvas id="map"></canvas>
-          <div id="loading-overlay">
-            <div id="loading-card">
-              <h2>Rumorwoods</h2>
-              <p>
-                A faithful, fully in-browser reimplementation of
-                <i>Generative Agents: Interactive Simulacra of Human Behavior</i>
-                (Park et&nbsp;al., 2023). Twenty-five agents live out their days in
-                Smallville — remembering, reflecting, planning, and spreading the
-                word about Isabella's Valentine's Day party.
-              </p>
-              <div id="backend-choice">
-                <label>
-                  <input type="radio" name="backend" value="webllm" checked />
-                  WebLLM (WebGPU, in-browser)
-                </label>
-                <select id="webllm-model"></select>
-                <label>
-                  <input type="radio" name="backend" value="local" />
-                  Local llama.cpp / Ollama server
-                </label>
-                <div id="local-config">
-                  <input id="local-url" type="text" value="http://localhost:8080" placeholder="Base URL (e.g. http://localhost:8080 or http://localhost:11434)" />
-                  <input id="local-model" type="text" placeholder="Model name (e.g. qwen2.5:7b-instruct; leave empty for llama.cpp default)" />
-                </div>
-              </div>
-              <button id="btn-load">Load model &amp; begin</button>
-              <div id="load-progress"></div>
-            </div>
-          </div>
         </div>
         <aside id="sidebar">
           <div id="inspector"></div>
@@ -64,6 +36,55 @@
           </div>
         </aside>
       </main>
+      <div id="loading-overlay">
+        <div id="loading-card">
+          <h2>Rumorwoods</h2>
+          <p>
+            A faithful, fully in-browser reimplementation of
+            <i>Generative Agents: Interactive Simulacra of Human Behavior</i>
+            (Park et&nbsp;al., 2023). Twenty-five agents live out their days in
+            Smallville — remembering, reflecting, planning, and spreading the
+            word about Isabella's Valentine's Day party.
+          </p>
+          <div id="settings-columns">
+            <section>
+              <div class="panel-title">Model backend</div>
+              <div id="backend-choice">
+                <label>
+                  <input type="radio" name="backend" value="webllm" checked />
+                  WebLLM (WebGPU, in-browser)
+                </label>
+                <select id="webllm-model"></select>
+                <label>
+                  <input type="radio" name="backend" value="local" />
+                  Local LLM server (llama.cpp, Ollama, LM Studio, vLLM…)
+                </label>
+                <div id="local-config">
+                  <div id="server-presets">
+                    <button type="button" class="preset" data-url="http://localhost:8080">llama.cpp :8080</button>
+                    <button type="button" class="preset" data-url="http://localhost:11434">Ollama :11434</button>
+                    <button type="button" class="preset" data-url="http://localhost:1234">LM Studio :1234</button>
+                    <button type="button" class="preset" data-url="http://localhost:8000">vLLM :8000</button>
+                  </div>
+                  <div id="server-url-row">
+                    <input id="local-url" type="text" value="http://localhost:8080" placeholder="Base URL (e.g. http://localhost:8080)" />
+                    <button type="button" id="btn-check">Check</button>
+                  </div>
+                  <div id="server-status"></div>
+                  <select id="local-model-select" hidden></select>
+                  <input id="local-model" type="text" placeholder="Model name (leave empty for server default)" />
+                </div>
+              </div>
+            </section>
+            <section>
+              <div class="panel-title">Saved sessions</div>
+              <div id="session-list"><span class="hint">No saved sessions yet. Use Save in the top bar while a sim is running.</span></div>
+            </section>
+          </div>
+          <button id="btn-load">Load model &amp; begin</button>
+          <div id="load-progress"></div>
+        </div>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

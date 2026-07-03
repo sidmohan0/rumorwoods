@@ -30,6 +30,13 @@ export class Renderer {
   private offsetX = 0;
   private offsetY = 0;
   private scale = 1;
+  private dragging: {
+    startX: number;
+    startY: number;
+    lastX: number;
+    lastY: number;
+    moved: boolean;
+  } | null = null;
   onSelect?: (agent: Agent | null) => void;
 
   constructor(canvas: HTMLCanvasElement, world: World, agents: Agent[]) {
@@ -41,6 +48,11 @@ export class Renderer {
     canvas.addEventListener("wheel", (e) => this.handleWheel(e), {
       passive: false,
     });
+    canvas.addEventListener("pointerdown", (e) => this.handlePointerDown(e));
+    canvas.addEventListener("pointermove", (e) => this.handlePointerMove(e));
+    canvas.addEventListener("pointerup", (e) => this.handlePointerUp(e));
+    canvas.addEventListener("pointerleave", () => (this.dragging = null));
+    canvas.style.touchAction = "none";
     this.sheet = new Image();
     this.sheet.src = SHEET_URL;
     this.sheet.onload = () => {
@@ -71,7 +83,55 @@ export class Renderer {
     this.scale *= factor;
   }
 
+  private handlePointerDown(e: PointerEvent): void {
+    try {
+      this.canvas.setPointerCapture(e.pointerId);
+    } catch {
+      // Synthetic events may carry an inactive pointerId.
+    }
+    this.dragging = {
+      startX: e.clientX,
+      startY: e.clientY,
+      lastX: e.clientX,
+      lastY: e.clientY,
+      moved: false,
+    };
+  }
+
+  private handlePointerMove(e: PointerEvent): void {
+    if (!this.dragging) return;
+    const totalX = e.clientX - this.dragging.startX;
+    const totalY = e.clientY - this.dragging.startY;
+    if (!this.dragging.moved && Math.hypot(totalX, totalY) < 4) return;
+    this.dragging.moved = true;
+    this.offsetX += e.clientX - this.dragging.lastX;
+    this.offsetY += e.clientY - this.dragging.lastY;
+    this.dragging.lastX = e.clientX;
+    this.dragging.lastY = e.clientY;
+    this.canvas.style.cursor = "grabbing";
+  }
+
+  private handlePointerUp(e: PointerEvent): void {
+    try {
+      this.canvas.releasePointerCapture(e.pointerId);
+    } catch {
+      // Matching guard for synthetic events.
+    }
+    this.canvas.style.cursor = "";
+    // Leave `dragging.moved` visible to the click handler that fires
+    // right after pointerup, then clear it.
+    const wasDrag = this.dragging?.moved ?? false;
+    this.dragging = null;
+    if (wasDrag) this.suppressClick = true;
+  }
+
+  private suppressClick = false;
+
   private handleClick(e: MouseEvent): void {
+    if (this.suppressClick) {
+      this.suppressClick = false;
+      return;
+    }
     const wx = (e.offsetX - this.offsetX) / (TILE * this.scale);
     const wy = (e.offsetY - this.offsetY) / (TILE * this.scale);
     let best: Agent | null = null;
