@@ -4,11 +4,14 @@
 
 A faithful, **fully in-browser** reimplementation of
 [*Generative Agents: Interactive Simulacra of Human Behavior*](https://arxiv.org/abs/2304.03442)
-(Park et al., UIST '23).
+(Park et al., UIST '23) — the Stanford "Smallville" experiment whose authors went on
+to found [Simile](https://simile.ai/blog/the-simulation-company) ($100M Series A,
+Feb 2026) to simulate human behavior at enterprise scale.
 
-Twenty-five agents live out their days in Smallville — perceiving, remembering,
-retrieving, reflecting, planning, and conversing — with **all cognition driven by a
-real LLM**.
+Rumorwoods is the open, local-first counterpart: twenty-five **fictional** villagers
+live out their days in Smallville — perceiving, remembering, retrieving, reflecting,
+planning, and conversing — with **all cognition driven by a real LLM on your own
+hardware**. No server, no API key, no data collection; nothing leaves your machine.
 
 - **LLM**: Qwen2.5-7B-Instruct running on your GPU via [WebLLM](https://github.com/mlc-ai/web-llm)
   (WebGPU). Smaller Qwen variants selectable for lighter GPUs. Optionally, point the app
