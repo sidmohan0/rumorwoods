@@ -69,6 +69,29 @@ npx tsx tools/benchmark.mts http://localhost:8080
 #   open the app with ?bench=1 and click "Load model & begin"
 ```
 
+## Inference efficiency
+
+All 25 agents share one model, one engine, and one serialized call queue —
+agents are lightweight "virtual roles" (a memory stream, a plan, a position),
+not separate model instances. On top of that, three optimizations target the
+cost profile we measured with the benchmark harness (~87% of tokens are prompt
+tokens; hundreds of small calls per sim-hour, where per-call overhead
+dominates — especially over WebGPU):
+
+- **Packed calls.** Prompts that always ran back-to-back are folded into one
+  JSON reply each: an action's emoji + importance score (was 2 calls), the
+  importance scores of all percepts in a step (was up to 3), and the
+  post-conversation importance + memo + planning thought (was 3). Same
+  cognitive outputs, roughly a third fewer requests.
+- **Structured outputs.** Packed prompts use JSON-Schema-constrained decoding
+  (`response_format` on both llama.cpp and WebLLM), so replies are guaranteed
+  parseable — no regex scraping, no wasted tokens on preamble, and small
+  models can't ramble. Servers that reject `response_format` (older Ollama)
+  are detected on first use and the sim falls back to unconstrained prompts.
+- **Worker-hosted WebLLM.** The in-browser engine runs in a dedicated Web
+  Worker (`CreateWebWorkerMLCEngine`), keeping map rendering and UI
+  interaction smooth during inference.
+
 ## Architecture (paper section → module)
 
 | Paper component | Module |

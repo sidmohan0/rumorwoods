@@ -9,8 +9,10 @@ import {
   PlanEntry,
 } from "./types";
 import {
-  conversationMemoPrompt,
-  conversationPlanningThoughtPrompt,
+  ACTION_NOTE_SCHEMA,
+  actionNotePrompt,
+  CONVERSATION_OUTCOME_SCHEMA,
+  conversationOutcomePrompt,
   dailyPlanPrompt,
   decomposePrompt,
   interviewPrompt,
@@ -19,17 +21,35 @@ import {
   thoughtNotePrompt,
   dialogueOpenerPrompt,
   dialogueTurnPrompt,
-  emojiPrompt,
   formatClock,
   formatDate,
   formatTime,
-  importancePrompt,
+  importanceBatchPrompt,
+  importanceBatchSchema,
   objectStatusPrompt,
   reactionPrompt,
   reflectionInsightsPrompt,
   reflectionQuestionsPrompt,
   summaryComponentPrompt,
 } from "./prompts";
+
+/** Parse a (possibly fenced) JSON object reply; null on failure. */
+function parseJson<T>(reply: string): T | null {
+  const cleaned = reply.replace(/```(?:json)?/g, "").trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  try {
+    return JSON.parse(cleaned.slice(start, end + 1)) as T;
+  } catch {
+    return null;
+  }
+}
+
+function clampImportance(value: unknown, fallback = 3): number {
+  const n = typeof value === "number" ? Math.round(value) : NaN;
+  return Number.isFinite(n) ? Math.min(10, Math.max(1, n)) : fallback;
+}
 
 const REFLECTION_THRESHOLD = 150;
 const VISION_RADIUS = 8;
@@ -105,14 +125,50 @@ export class Agent {
     this.memory.importanceSinceReflection = 0;
   }
 
-  private async scoreImportance(description: string): Promise<number> {
-    const reply = await this.llm.chat(
-      importancePrompt(this.persona, description),
-      { temperature: 0, maxTokens: 8 },
-    );
-    const match = reply.match(/\d+/);
-    const value = match ? parseInt(match[0], 10) : 3;
-    return Math.min(10, Math.max(1, value));
+  /**
+   * Packed action annotation: emoji + importance in one constrained
+   * call (previously two separate calls).
+   */
+  private async annotateAction(
+    description: string,
+  ): Promise<{ emoji: string; importance: number }> {
+    try {
+      const reply = await this.llm.chat(
+        actionNotePrompt(this.persona, description),
+        { temperature: 0.2, maxTokens: 40, jsonSchema: ACTION_NOTE_SCHEMA },
+      );
+      const parsed = parseJson<{ emoji?: string; importance?: number }>(reply);
+      const emojis = (parsed?.emoji ?? "").match(/\p{Extended_Pictographic}/gu);
+      return {
+        emoji: emojis ? emojis.slice(0, 2).join("") : "💬",
+        importance: clampImportance(parsed?.importance),
+      };
+    } catch {
+      return { emoji: "💬", importance: 3 };
+    }
+  }
+
+  /** Score several observations' importance in one constrained call. */
+  private async scoreImportanceBatch(
+    descriptions: string[],
+  ): Promise<number[]> {
+    if (descriptions.length === 0) return [];
+    try {
+      const reply = await this.llm.chat(
+        importanceBatchPrompt(this.persona, descriptions),
+        {
+          temperature: 0,
+          maxTokens: 20 + 6 * descriptions.length,
+          jsonSchema: importanceBatchSchema(descriptions.length),
+        },
+      );
+      const parsed = parseJson<{ scores?: unknown[] }>(reply);
+      return descriptions.map((_, i) =>
+        clampImportance(parsed?.scores?.[i]),
+      );
+    } catch {
+      return descriptions.map(() => 3);
+    }
   }
 
   /** Paper appendix A: dynamically generated agent summary description. */
@@ -394,14 +450,19 @@ export class Agent {
     const location = entry.location ?? null;
     const endsAt =
       Math.floor(now / 1440) * 1440 + entry.start + entry.duration;
-    const emoji = await this.actionEmoji(entry.description);
-    this.setAction(entry.description, location, Math.max(endsAt, now + 5), emoji);
+    const note = await this.annotateAction(entry.description);
+    this.setAction(
+      entry.description,
+      location,
+      Math.max(endsAt, now + 5),
+      note.emoji,
+    );
 
     await this.memory.add(
       "observation",
       `${this.name} is ${entry.description}`,
       now,
-      await this.scoreImportance(`${this.name} is ${entry.description}`),
+      note.importance,
       { subject: this.name },
     );
 
@@ -409,19 +470,6 @@ export class Agent {
       const target = this.world.resolveLocation(location);
       if (target) this.path = this.world.findPath({ x: this.x, y: this.y }, target);
       await this.updateObjectStatus(now);
-    }
-  }
-
-  private async actionEmoji(description: string): Promise<string> {
-    try {
-      const reply = await this.llm.chat(emojiPrompt(description), {
-        temperature: 0.2,
-        maxTokens: 12,
-      });
-      const emojis = reply.match(/\p{Extended_Pictographic}/gu);
-      return emojis ? emojis.slice(0, 2).join("") : "💬";
-    } catch {
-      return "💬";
     }
   }
 
@@ -517,17 +565,28 @@ export class Agent {
 
     candidates.sort((a, b) => a.distance - b.distance);
 
+    const kept = candidates.slice(0, ATTENTION_BANDWIDTH);
+
+    // Score all unscored percepts in a single packed call.
+    const unscored = kept.filter((c) => c.importance === null);
+    const scores = await this.scoreImportanceBatch(
+      unscored.map((c) => c.description),
+    );
+    unscored.forEach((c, i) => {
+      c.importance = scores[i];
+    });
+
     const results: Array<{
       description: string;
       aboutAgent: Agent | null;
       node: MemoryNode;
     }> = [];
-    for (const candidate of candidates.slice(0, ATTENTION_BANDWIDTH)) {
+    for (const candidate of kept) {
       const node = await this.memory.add(
         "observation",
         candidate.description,
         now,
-        candidate.importance ?? (await this.scoreImportance(candidate.description)),
+        candidate.importance ?? 3,
         { subject: candidate.subject },
       );
       results.push({
@@ -580,13 +639,13 @@ export class Agent {
     }
 
     // Non-dialogue reaction: replace the current action.
-    const emoji = await this.actionEmoji(reaction);
-    this.setAction(reaction, null, now + 30, emoji);
+    const note = await this.annotateAction(reaction);
+    this.setAction(reaction, null, now + 30, note.emoji);
     await this.memory.add(
       "observation",
       `${this.name} is ${reaction}`,
       now,
-      await this.scoreImportance(reaction),
+      note.importance,
       { subject: this.name },
     );
     return true;
@@ -725,35 +784,45 @@ export class Agent {
       if (!agent) continue;
       const partner = agent === this ? other?.name : this.name;
       const description = `${agent.name} had a conversation with ${partner}:\n${transcript}`;
-      await agent.memory.add(
-        "chat",
-        description,
-        now,
-        await agent.scoreImportance(description),
-        { subject: `conversation with ${partner}` },
-      );
-      // Post-conversation memo and planning thought (official impl).
+
+      // Packed post-conversation call: importance + memo + planning
+      // thought in one constrained reply (official impl: three calls).
+      let importance = 5;
+      let memo = "";
+      let planningThought = "";
       try {
-        const memo = await agent.llm.chat(
-          conversationMemoPrompt(agent.name, transcript),
-          { temperature: 0.4, maxTokens: 80 },
+        const reply = await agent.llm.chat(
+          conversationOutcomePrompt(agent.name, transcript),
+          {
+            temperature: 0.4,
+            maxTokens: 200,
+            jsonSchema: CONVERSATION_OUTCOME_SCHEMA,
+          },
         );
-        if (memo.trim()) {
-          await agent.memory.add("reflection", memo.trim(), now, 4, {
-            subject: agent.name,
-          });
-        }
-        const planningThought = await agent.llm.chat(
-          conversationPlanningThoughtPrompt(agent.name, transcript),
-          { temperature: 0.4, maxTokens: 80 },
-        );
-        if (planningThought.trim()) {
-          await agent.memory.add("plan", planningThought.trim(), now, 4, {
-            subject: agent.name,
-          });
-        }
+        const parsed = parseJson<{
+          importance?: number;
+          memo?: string;
+          planning_thought?: string;
+        }>(reply);
+        importance = clampImportance(parsed?.importance, 5);
+        memo = (parsed?.memo ?? "").trim();
+        planningThought = (parsed?.planning_thought ?? "").trim();
       } catch {
-        // Non-fatal: the raw transcript memory is already stored.
+        // Non-fatal: fall back to storing the transcript alone.
+      }
+
+      await agent.memory.add("chat", description, now, importance, {
+        subject: `conversation with ${partner}`,
+      });
+      if (memo) {
+        await agent.memory.add("reflection", memo, now, 4, {
+          subject: agent.name,
+        });
+      }
+      if (planningThought) {
+        await agent.memory.add("plan", planningThought, now, 4, {
+          subject: agent.name,
+        });
       }
       // Resume plans from the interruption point.
       agent.action = { ...agent.action, endsAt: now };

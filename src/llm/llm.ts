@@ -1,5 +1,5 @@
 import {
-  CreateMLCEngine,
+  CreateWebWorkerMLCEngine,
   MLCEngineInterface,
   InitProgressReport,
   prebuiltAppConfig,
@@ -14,6 +14,12 @@ export interface CompletionOptions {
   temperature?: number;
   maxTokens?: number;
   stop?: string[];
+  /**
+   * JSON Schema to constrain the output. Backends translate this to
+   * their grammar-constrained decoding API; the reply is guaranteed
+   * parseable JSON when supported, and plain text otherwise.
+   */
+  jsonSchema?: object;
 }
 
 export interface UsageStats {
@@ -71,9 +77,13 @@ export class WebLLMBackend implements LLMBackend {
         "WebGPU is not available in this browser. Use a WebGPU-capable browser (Chrome 113+), or switch to a local llama.cpp/Ollama server in Settings.",
       );
     }
-    this.engine = await CreateMLCEngine(this.modelId, {
-      initProgressCallback: this.onProgress,
-    });
+    this.engine = await CreateWebWorkerMLCEngine(
+      new Worker(new URL("./webllm-worker.ts", import.meta.url), {
+        type: "module",
+      }),
+      this.modelId,
+      { initProgressCallback: this.onProgress },
+    );
   }
 
   async chat(
@@ -86,6 +96,9 @@ export class WebLLMBackend implements LLMBackend {
       temperature: options.temperature ?? 0.8,
       max_tokens: options.maxTokens ?? 512,
       stop: options.stop,
+      response_format: options.jsonSchema
+        ? { type: "json_object", schema: JSON.stringify(options.jsonSchema) }
+        : undefined,
       extra_body: { enable_thinking: false },
     });
     this.usage.calls++;
@@ -109,6 +122,8 @@ export class OpenAICompatBackend implements LLMBackend {
   private baseUrl: string;
   private model: string;
   private apiKey?: string;
+  /** Flips off if the server rejects response_format (e.g. old Ollama). */
+  private schemaSupported = true;
 
   constructor(baseUrl: string, model: string, apiKey?: string) {
     this.baseUrl = baseUrl.replace(/\/+$/, "");
@@ -125,18 +140,36 @@ export class OpenAICompatBackend implements LLMBackend {
       "Content-Type": "application/json",
     };
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
-    const res = await fetch(`${this.baseUrl}/v1/chat/completions`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
+    const useSchema = options.jsonSchema !== undefined && this.schemaSupported;
+    const body = (withSchema: boolean) =>
+      JSON.stringify({
         model: this.model,
         messages,
         temperature: options.temperature ?? 0.8,
         max_tokens: options.maxTokens ?? 512,
         stop: options.stop,
+        response_format:
+          withSchema && options.jsonSchema
+            ? {
+                type: "json_schema",
+                json_schema: { name: "response", schema: options.jsonSchema },
+              }
+            : undefined,
         chat_template_kwargs: { enable_thinking: false },
-      }),
+      });
+    let res = await fetch(`${this.baseUrl}/v1/chat/completions`, {
+      method: "POST",
+      headers,
+      body: body(useSchema),
     });
+    if (res.status === 400 && useSchema) {
+      this.schemaSupported = false;
+      res = await fetch(`${this.baseUrl}/v1/chat/completions`, {
+        method: "POST",
+        headers,
+        body: body(false),
+      });
+    }
     if (!res.ok) {
       throw new Error(`LLM server error ${res.status}: ${await res.text()}`);
     }

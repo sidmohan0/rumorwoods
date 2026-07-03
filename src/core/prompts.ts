@@ -40,18 +40,6 @@ function user(content: string): ChatMessage[] {
   return [{ role: "user", content }];
 }
 
-/**
- * Importance ("poignancy") scoring prompt from the paper: rate a memory
- * from 1 (mundane) to 10 (extremely poignant).
- */
-export function importancePrompt(persona: Persona, description: string): ChatMessage[] {
-  return user(
-    `On the scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance), rate the likely poignancy of the following piece of memory for ${persona.name}.\n` +
-      `Memory: ${description}\n` +
-      `Respond with a single integer between 1 and 10 and nothing else.\nRating:`,
-  );
-}
-
 /** Broad-strokes daily plan prompt (paper section 4.3). */
 export function dailyPlanPrompt(
   summary: string,
@@ -237,20 +225,34 @@ export function newCurrentlyPrompt(
 }
 
 /** Post-conversation memo (official implementation: memo_on_convo). */
-export function conversationMemoPrompt(personaName: string, transcript: string): ChatMessage[] {
+/**
+ * Packed post-conversation prompt: poignancy score, memo, and planning
+ * thought (official impl runs these as three separate calls) in one
+ * JSON reply.
+ */
+export function conversationOutcomePrompt(
+  personaName: string,
+  transcript: string,
+): ChatMessage[] {
   return user(
     `[Conversation]\n${transcript}\n\n` +
-      `Write down if there is anything from the conversation that ${personaName} might have found interesting from their perspective, in a full sentence starting with "${personaName}". Respond with only that sentence.`,
+      `From ${personaName}'s perspective, reply with JSON having exactly these fields:\n` +
+      `"importance": integer 1-10, where 1 is a purely mundane conversation and 10 an extremely poignant one for ${personaName}\n` +
+      `"memo": one full sentence starting with "${personaName}" noting anything ${personaName} found interesting, or "" if nothing\n` +
+      `"planning_thought": one full sentence starting with "${personaName}" noting anything ${personaName} needs to remember for their planning, or "" if nothing`,
   );
 }
 
-/** Post-conversation planning thought (official implementation). */
-export function conversationPlanningThoughtPrompt(personaName: string, transcript: string): ChatMessage[] {
-  return user(
-    `[Conversation]\n${transcript}\n\n` +
-      `Write down if there is anything from the conversation that ${personaName} needs to remember for their planning, from ${personaName}'s perspective, in a full sentence starting with "${personaName}". Respond with only that sentence.`,
-  );
-}
+export const CONVERSATION_OUTCOME_SCHEMA = {
+  type: "object",
+  properties: {
+    importance: { type: "integer", minimum: 1, maximum: 10 },
+    memo: { type: "string" },
+    planning_thought: { type: "string" },
+  },
+  required: ["importance", "memo", "planning_thought"],
+  additionalProperties: false,
+};
 
 /** User-to-agent interview (paper section 3: interviewing agents). */
 export function interviewPrompt(
@@ -274,13 +276,55 @@ export function interviewPrompt(
   );
 }
 
-/** Convert an action description into a short emoji (paper section 3). */
-export function emojiPrompt(action: string): ChatMessage[] {
+/**
+ * Packed action annotation: emoji "pronunciatio" (paper section 3) and
+ * poignancy score in one JSON reply, instead of two separate calls.
+ */
+export function actionNotePrompt(persona: Persona, action: string): ChatMessage[] {
   return user(
-    `Convert this action description into one or two emojis that represent it.\n` +
-      `Action: ${action}\n` +
-      `Respond with only the emoji.`,
+    `${persona.name} is currently: ${action}\n` +
+      `Reply with JSON having exactly these fields:\n` +
+      `"emoji": one or two emoji representing the action\n` +
+      `"importance": integer 1-10, where 1 is purely mundane (e.g., brushing teeth) and 10 extremely poignant (e.g., a break up) for ${persona.name}`,
   );
+}
+
+export const ACTION_NOTE_SCHEMA = {
+  type: "object",
+  properties: {
+    emoji: { type: "string" },
+    importance: { type: "integer", minimum: 1, maximum: 10 },
+  },
+  required: ["emoji", "importance"],
+  additionalProperties: false,
+};
+
+/** Batch importance scoring for a set of observations (one call). */
+export function importanceBatchPrompt(
+  persona: Persona,
+  descriptions: string[],
+): ChatMessage[] {
+  return user(
+    `On the scale of 1 to 10, where 1 is purely mundane (e.g., brushing teeth, making bed) and 10 is extremely poignant (e.g., a break up, college acceptance), rate the likely poignancy of each of the following memories for ${persona.name}.\n` +
+      descriptions.map((d, i) => `${i + 1}. ${d}`).join("\n") +
+      `\nReply with JSON: {"scores": [<one integer per memory, in order>]}`,
+  );
+}
+
+export function importanceBatchSchema(count: number): object {
+  return {
+    type: "object",
+    properties: {
+      scores: {
+        type: "array",
+        items: { type: "integer", minimum: 1, maximum: 10 },
+        minItems: count,
+        maxItems: count,
+      },
+    },
+    required: ["scores"],
+    additionalProperties: false,
+  };
 }
 
 /** Identify which object the agent is using and its new status. */
