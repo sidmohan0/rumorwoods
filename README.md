@@ -69,6 +69,25 @@ npx tsx tools/benchmark.mts http://localhost:8080
 #   open the app with ?bench=1 and click "Load model & begin"
 ```
 
+### Results
+
+One full game day (6:00 am → 6:00 am), 25 agents on the Ville map. The local
+run used Qwen2.5-7B-Instruct Q4_K_M via llama.cpp on an M-series MacBook
+(48 GB); the GPT-3.5 row is the original Generative Agents architecture as
+measured by the AGA authors, at early-2023 API pricing.
+
+| | Tokens / game day | LLM calls | Wall-clock | Cost |
+| --- | --- | --- | --- | --- |
+| GPT-3.5-Turbo, original architecture (2023) | 12.7M | not published | > 1 real day | ~$25 + API access |
+| Rumorwoods, local llama.cpp (2026) | **1.47M** (89% prompt) | 5,790 | **1.16 h** (20.7× real time) | $0 |
+
+Call latency on the local run: p50 254 ms, p95 2.5 s, max 15.9 s (morning
+day-plan generations). Sleeping agents make no LLM calls, so sim hours 1–5 am
+complete in milliseconds. The token gap vs. the baseline reflects both the
+leaner reimplementation (merged reaction prompts, lazy plan decomposition,
+terse outputs) and the local model — it is an end-to-end system comparison,
+not a model-for-model one.
+
 ## Inference efficiency
 
 All 25 agents share one model, one engine, and one serialized call queue —
