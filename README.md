@@ -31,6 +31,35 @@ real LLM**.
   rendered from Kenney's CC0 [Roguelike/RPG pack](https://kenney.nl/assets/roguelike-rpg-pack)
   (`public/tiles/`).
 
+## How it works
+
+![How the simulation works: load a model, seed 25 minds, then a tick loop — every agent thinks through one shared LLM queue (perceive, react, plan, reflect), conversations advance one line per adjacent pair, everyone moves along A* paths, the clock jumps 10 minutes, and a memory stream is written and recalled throughout.](docs/simulation-loop.svg)
+
+1. **Load a model** — nothing intelligent exists yet; you pick the brain
+   (WebLLM on your GPU, or a local server). A small embedding model loads
+   alongside for memory recall.
+2. **Seed 25 minds** — each persona's description is split into sentences and
+   written into that agent's memory stream. This is the only scripted content
+   in the system.
+3. **Every agent thinks** — one LLM call at a time through a shared queue:
+   perceive nearby events, decide whether to react (this is where
+   conversations start), decompose the day plan into the next action when the
+   current one ends, and reflect when enough important memories accumulate.
+4. **Conversations advance** — one line per adjacent pair per tick, each line
+   conditioned on the speaker's retrieved memories. The LLM decides when a
+   conversation ends; nothing scripts what is said.
+5. **Everyone moves** — pure mechanics: up to 20 tiles along an A* path, then
+   the clock jumps 10 minutes and the loop repeats. Sleeping agents skip
+   everything, so nights are nearly free.
+6. **You watch and steer** — the map, inspector, town log, and interviews are
+   read-only views over agent state; sessions snapshot it all to the browser;
+   the character editor rewrites the inputs to steps 2–3.
+
+Every prompt is built from memories recalled by recency × importance ×
+relevance, and every outcome is written back — agents only know what they
+have perceived or been told, which is why information physically travels
+through conversations.
+
 ## Running
 
 ```bash

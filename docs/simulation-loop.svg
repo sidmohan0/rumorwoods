@@ -1,0 +1,87 @@
+<svg viewBox="0 0 700 590" xmlns="http://www.w3.org/2000/svg" role="img" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title>How the Rumorwoods simulation works</title>
+<desc>Flow: load a model, seed memories, then a repeating tick loop where every agent thinks via the LLM, conversations advance, and everyone moves; a memory stream is read and written throughout; the user watches via the map and inspector.</desc>
+<defs>
+<marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#888780"/></marker>
+</defs>
+
+<g>
+<rect x="180" y="10" width="240" height="52" rx="4" fill="#F1EFE8" stroke="#5F5E5A"/>
+<text x="300" y="32" text-anchor="middle" font-size="13" font-weight="600" fill="#2C2C2A">1 · Load a model</text>
+<text x="300" y="49" text-anchor="middle" font-size="11.5" fill="#5F5E5A">WebLLM in-browser, or local server</text>
+</g>
+<line x1="300" y1="62" x2="300" y2="92" stroke="#888780" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<g>
+<rect x="180" y="96" width="240" height="52" rx="4" fill="#E1F5EE" stroke="#0F6E56"/>
+<text x="300" y="118" text-anchor="middle" font-size="13" font-weight="600" fill="#04342C">2 · Seed 25 minds</text>
+<text x="300" y="135" text-anchor="middle" font-size="11.5" fill="#085041">persona text becomes first memories</text>
+</g>
+<line x1="300" y1="148" x2="300" y2="182" stroke="#888780" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<rect x="40" y="186" width="430" height="292" rx="4" fill="none" stroke="#888780" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="56" y="206" font-size="11.5" fill="#888780">the tick loop — each pass is 10 sim minutes</text>
+
+<g>
+<rect x="90" y="218" width="330" height="50" rx="4" fill="#EEEDFE" stroke="#534AB7"/>
+<text x="255" y="239" text-anchor="middle" font-size="13" font-weight="600" fill="#26215C">3 · Every agent thinks</text>
+<text x="255" y="256" text-anchor="middle" font-size="11.5" fill="#534AB7">one LLM call at a time, shared queue</text>
+</g>
+
+<g>
+<rect x="90" y="278" width="76" height="26" rx="13" fill="#F1EFE8" stroke="#5F5E5A"/>
+<text x="128" y="295" text-anchor="middle" font-size="11" fill="#444441">perceive</text>
+<rect x="175" y="278" width="76" height="26" rx="13" fill="#F1EFE8" stroke="#5F5E5A"/>
+<text x="213" y="295" text-anchor="middle" font-size="11" fill="#444441">react</text>
+<rect x="260" y="278" width="76" height="26" rx="13" fill="#F1EFE8" stroke="#5F5E5A"/>
+<text x="298" y="295" text-anchor="middle" font-size="11" fill="#444441">plan</text>
+<rect x="345" y="278" width="76" height="26" rx="13" fill="#F1EFE8" stroke="#5F5E5A"/>
+<text x="383" y="295" text-anchor="middle" font-size="11" fill="#444441">reflect</text>
+</g>
+<line x1="255" y1="304" x2="255" y2="322" stroke="#888780" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<g>
+<rect x="90" y="326" width="330" height="46" rx="4" fill="#EEEDFE" stroke="#534AB7"/>
+<text x="255" y="345" text-anchor="middle" font-size="13" font-weight="600" fill="#26215C">4 · Conversations advance</text>
+<text x="255" y="362" text-anchor="middle" font-size="11.5" fill="#534AB7">one line per adjacent pair</text>
+</g>
+<line x1="255" y1="372" x2="255" y2="390" stroke="#888780" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<g>
+<rect x="90" y="394" width="330" height="46" rx="4" fill="#F1EFE8" stroke="#5F5E5A"/>
+<text x="255" y="413" text-anchor="middle" font-size="13" font-weight="600" fill="#2C2C2A">5 · Everyone moves</text>
+<text x="255" y="430" text-anchor="middle" font-size="11.5" fill="#5F5E5A">up to 20 tiles along A* paths</text>
+</g>
+
+<path d="M 255 440 L 255 456 L 66 456 L 66 243 L 86 243" fill="none" stroke="#888780" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="72" y="470" font-size="11" fill="#888780">clock +10 min, repeat</text>
+
+<g>
+<rect x="500" y="252" width="176" height="116" rx="4" fill="#E1F5EE" stroke="#0F6E56"/>
+<text x="588" y="276" text-anchor="middle" font-size="13" font-weight="600" fill="#04342C">Memory stream</text>
+<text x="588" y="296" text-anchor="middle" font-size="11.5" fill="#085041">every event stored</text>
+<text x="588" y="313" text-anchor="middle" font-size="11.5" fill="#085041">with an importance score</text>
+<text x="588" y="336" text-anchor="middle" font-size="11.5" fill="#085041">recall favors recent ·</text>
+<text x="588" y="353" text-anchor="middle" font-size="11.5" fill="#085041">important · relevant</text>
+</g>
+<line x1="420" y1="290" x2="496" y2="290" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="496" y1="320" x2="424" y2="320" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="458" y="284" text-anchor="middle" font-size="11" fill="#888780">write</text>
+<text x="458" y="336" text-anchor="middle" font-size="11" fill="#888780">recall</text>
+
+<line x1="300" y1="478" x2="300" y2="508" stroke="#888780" stroke-width="1.5" marker-end="url(#arr)"/>
+<g>
+<rect x="180" y="512" width="240" height="52" rx="4" fill="#F1EFE8" stroke="#5F5E5A"/>
+<text x="300" y="534" text-anchor="middle" font-size="13" font-weight="600" fill="#2C2C2A">6 · You watch and steer</text>
+<text x="300" y="551" text-anchor="middle" font-size="11.5" fill="#5F5E5A">map · inspector · interviews · saves</text>
+</g>
+
+<g>
+<rect x="500" y="522" width="10" height="10" rx="2" fill="#EEEDFE" stroke="#534AB7"/>
+<text x="516" y="531" font-size="11" fill="#888780">LLM thinking</text>
+<rect x="500" y="542" width="10" height="10" rx="2" fill="#E1F5EE" stroke="#0F6E56"/>
+<text x="516" y="551" font-size="11" fill="#888780">memory</text>
+<rect x="500" y="562" width="10" height="10" rx="2" fill="#F1EFE8" stroke="#5F5E5A"/>
+<text x="516" y="571" font-size="11" fill="#888780">mechanics</text>
+</g>
+</svg>
