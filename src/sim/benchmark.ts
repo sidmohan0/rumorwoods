@@ -98,7 +98,9 @@ export async function runGameDay(
   const usage = (): UsageStats =>
     llm.usage ?? { calls: llm.callCount, promptTokens: 0, completionTokens: 0 };
 
-  const startUsage = usage();
+  // Copy: llm.usage is a live, mutated object — holding the reference
+  // would make every start-vs-now delta zero.
+  const startUsage = { ...usage() };
   const startLatencyCount = llm.latenciesMs.length;
   const dayStart = engine.time;
   const dayEnd = dayStart + GAME_DAY_MINUTES;
