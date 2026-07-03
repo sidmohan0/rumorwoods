@@ -6,7 +6,7 @@ A faithful, **fully in-browser** reimplementation of
 
 Twenty-five agents live out their days in Smallville — perceiving, remembering,
 retrieving, reflecting, planning, and conversing — with **all cognition driven by a
-real LLM**. No server, no API keys, no mocks.
+real LLM**.
 
 - **LLM**: Qwen2.5-7B-Instruct running on your GPU via [WebLLM](https://github.com/mlc-ai/web-llm)
   (WebGPU). Smaller Qwen variants selectable for lighter GPUs. Optionally, point the app
