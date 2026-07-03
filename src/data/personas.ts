@@ -18,8 +18,8 @@ export const PERSONAS: Persona[] = [
       "Isabella Rodriguez is planning a Valentine's Day party at Hobbs Cafe from 5pm to 7pm on February 14th, and is inviting everyone she meets to attend",
     lifestyle:
       "Isabella Rodriguez goes to bed around 11pm, wakes up around 6am, and opens the cafe at 8am",
-    home: "Isabella Rodriguez's apartment:bedroom",
-    workplace: "Hobbs Cafe:counter",
+    home: "Isabella Rodriguez's apartment:main room",
+    workplace: "Hobbs Cafe:cafe:behind the cafe counter",
     color: "#e05658",
     wakeHour: 6,
   },
@@ -33,7 +33,7 @@ export const PERSONAS: Persona[] = [
       "Maria Lopez is working on her physics coursework and streaming in the evenings; she is trying to find more excuses to talk to Klaus Mueller",
     lifestyle:
       "Maria Lopez goes to bed around midnight, wakes up around 9am, and studies or streams in the afternoons",
-    home: "Oak Hill College Dorm:Maria Lopez's room",
+    home: "Dorm for Oak Hill College:Maria Lopez's room",
     workplace: "Oak Hill College:library",
     color: "#e0a556",
     wakeHour: 9,
@@ -48,7 +48,7 @@ export const PERSONAS: Persona[] = [
       "Klaus Mueller is working hard on his research paper about gentrification and often discusses it with anyone who will listen",
     lifestyle:
       "Klaus Mueller goes to bed around 11pm, wakes up around 7am, and spends his days reading and writing at the library",
-    home: "Oak Hill College Dorm:Klaus Mueller's room",
+    home: "Dorm for Oak Hill College:Klaus Mueller's room",
     workplace: "Oak Hill College:library",
     color: "#5691e0",
     wakeHour: 7,
@@ -63,8 +63,8 @@ export const PERSONAS: Persona[] = [
       "John Lin is running the pharmacy counter and checking in on his son Eddy's schoolwork",
     lifestyle:
       "John Lin goes to bed around 10pm, wakes up around 6am, and opens the pharmacy at 8am",
-    home: "The Lin family's house:John and Mei's bedroom",
-    workplace: "The Willows Market and Pharmacy:pharmacy counter",
+    home: "Lin family's house:Mei and John Lin's bedroom",
+    workplace: "The Willows Market and Pharmacy:store:behind the pharmacy counter",
     color: "#56b8e0",
     wakeHour: 6,
   },
@@ -78,7 +78,7 @@ export const PERSONAS: Persona[] = [
       "Mei Lin is preparing lectures for her classes at Oak Hill College and encouraging Eddy with his composition project",
     lifestyle:
       "Mei Lin goes to bed around 10pm, wakes up around 6:30am, and teaches at the college on weekdays",
-    home: "The Lin family's house:John and Mei's bedroom",
+    home: "Lin family's house:Mei and John Lin's bedroom",
     workplace: "Oak Hill College:classroom",
     color: "#9d56e0",
     wakeHour: 6.5,
@@ -93,7 +93,7 @@ export const PERSONAS: Persona[] = [
       "Eddy Lin is working on a music composition project for his college class and wants to dedicate more hours to it",
     lifestyle:
       "Eddy Lin goes to bed around 11pm, wakes up around 7am, and likes to take walks when thinking about his music",
-    home: "Oak Hill College Dorm:Eddy Lin's room",
+    home: "Lin family's house:Eddy Lin's bedroom",
     workplace: "Oak Hill College:classroom",
     color: "#56e09d",
     wakeHour: 7,
@@ -108,8 +108,8 @@ export const PERSONAS: Persona[] = [
       "Tom Moreno is stocking shelves at the market and following the upcoming local mayoral election closely",
     lifestyle:
       "Tom Moreno goes to bed around 10pm, wakes up around 6am, and works at the market during the day",
-    home: "The Moreno family's house:Tom and Jane's bedroom",
-    workplace: "The Willows Market and Pharmacy:grocery aisles",
+    home: "Moreno family's house:Tom and Jane Moreno's bedroom",
+    workplace: "The Willows Market and Pharmacy:store:behind the grocery counter",
     color: "#e05656",
     wakeHour: 6,
   },
@@ -123,7 +123,7 @@ export const PERSONAS: Persona[] = [
       "Jane Moreno is tending her garden and helping organize neighborhood get-togethers",
     lifestyle:
       "Jane Moreno goes to bed around 10pm, wakes up around 6:30am, and runs errands around town in the mornings",
-    home: "The Moreno family's house:Tom and Jane's bedroom",
+    home: "Moreno family's house:Tom and Jane Moreno's bedroom",
     color: "#e07a56",
     wakeHour: 6.5,
   },
@@ -137,7 +137,7 @@ export const PERSONAS: Persona[] = [
       "Sam Moore is campaigning for the local mayoral election and wants to hear residents' concerns",
     lifestyle:
       "Sam Moore goes to bed around 10pm, wakes up around 6am, and campaigns around town during the day",
-    home: "The Moore family's house:Sam and Jennifer's bedroom",
+    home: "Moore family's house:main room",
     color: "#568de0",
     wakeHour: 6,
   },
@@ -151,8 +151,8 @@ export const PERSONAS: Persona[] = [
       "Jennifer Moore is working on a new series of paintings of Johnson Park and supporting Sam's campaign",
     lifestyle:
       "Jennifer Moore goes to bed around 11pm, wakes up around 7am, and paints in the mornings",
-    home: "The Moore family's house:Sam and Jennifer's bedroom",
-    workplace: "Johnson Park:park bench",
+    home: "Moore family's house:main room",
+    workplace: "Johnson Park:park:park garden",
     color: "#c956e0",
     wakeHour: 7,
   },
@@ -166,7 +166,7 @@ export const PERSONAS: Persona[] = [
       "Yuriko Yamamoto is preparing her garden for spring and enjoys catching up with neighbors at Hobbs Cafe",
     lifestyle:
       "Yuriko Yamamoto goes to bed around 9pm, wakes up around 5:30am, and gardens in the mornings",
-    home: "Yuriko Yamamoto's house:bedroom",
+    home: "Yuriko Yamamoto's house:main room",
     color: "#56e0c9",
     wakeHour: 5.5,
   },
@@ -180,7 +180,7 @@ export const PERSONAS: Persona[] = [
       "Wolfgang Schulz is developing a mathematical framework for composing music and often works late",
     lifestyle:
       "Wolfgang Schulz goes to bed around 1am, wakes up around 9am, and works in the library or his dorm room",
-    home: "Oak Hill College Dorm:Wolfgang Schulz's room",
+    home: "Dorm for Oak Hill College:Wolfgang Schulz's room",
     workplace: "Oak Hill College:library",
     color: "#7a56e0",
     wakeHour: 9,
@@ -195,7 +195,7 @@ export const PERSONAS: Persona[] = [
       "Ayesha Khan is deep into writing her senior thesis and looking for people to discuss literature with",
     lifestyle:
       "Ayesha Khan goes to bed around 11pm, wakes up around 7:30am, and spends most days at the library",
-    home: "Oak Hill College Dorm:Ayesha Khan's room",
+    home: "Dorm for Oak Hill College:Ayesha Khan's room",
     workplace: "Oak Hill College:library",
     color: "#e056a5",
     wakeHour: 7.5,
@@ -210,7 +210,7 @@ export const PERSONAS: Persona[] = [
       "Adam Smith is drafting chapters of his economics textbook and occasionally guest lectures at the college",
     lifestyle:
       "Adam Smith goes to bed around 10pm, wakes up around 6am, and writes at his desk most of the day",
-    home: "Adam Smith's house:bedroom",
+    home: "Adam Smith's house:main room",
     workplace: "Oak Hill College:classroom",
     color: "#8ce056",
     wakeHour: 6,
@@ -225,8 +225,8 @@ export const PERSONAS: Persona[] = [
       "Arthur Burton is working shifts at the pub and thinking about hosting an open-mic night",
     lifestyle:
       "Arthur Burton goes to bed around 1am, wakes up around 9am, and works at the pub from noon until late",
-    home: "Arthur Burton's apartment:bedroom",
-    workplace: "The Rose and Crown Pub:bar",
+    home: "Arthur Burton's apartment:main room",
+    workplace: "The Rose and Crown Pub:pub:behind the bar counter",
     color: "#e0c956",
     wakeHour: 9,
   },
@@ -240,7 +240,7 @@ export const PERSONAS: Persona[] = [
       "Ryan Park is heads-down on a big software release and takes coffee breaks at Hobbs Cafe",
     lifestyle:
       "Ryan Park goes to bed around midnight, wakes up around 8am, and codes from home most of the day",
-    home: "Ryan Park's apartment:bedroom",
+    home: "Ryan Park's apartment:main room",
     color: "#56e07a",
     wakeHour: 8,
   },
@@ -254,8 +254,8 @@ export const PERSONAS: Persona[] = [
       "Giorgio Rossi is wrestling with a difficult step in his proof and walks in the park when stuck",
     lifestyle:
       "Giorgio Rossi goes to bed around midnight, wakes up around 8am, and alternates between his chalkboard and the park",
-    home: "Giorgio Rossi's house:bedroom",
-    workplace: "Johnson Park:old oak tree",
+    home: "Giorgio Rossi's apartment:main room",
+    workplace: "Johnson Park:park:park garden",
     color: "#e08d56",
     wakeHour: 8,
   },
@@ -269,8 +269,8 @@ export const PERSONAS: Persona[] = [
       "Carlos Gomez is assembling a new poetry collection and testing poems on pub audiences",
     lifestyle:
       "Carlos Gomez goes to bed around 2am, wakes up around 10am, and writes at night",
-    home: "Carlos Gomez's house:bedroom",
-    workplace: "The Rose and Crown Pub:seating area",
+    home: "Carlos Gomez's apartment:main room",
+    workplace: "The Rose and Crown Pub:pub:bar customer seating",
     color: "#a5e056",
     wakeHour: 10,
   },
@@ -284,8 +284,8 @@ export const PERSONAS: Persona[] = [
       "Tamara Taylor is finishing the draft of her children's book and looking for feedback",
     lifestyle:
       "Tamara Taylor goes to bed around 11pm, wakes up around 7am, and writes in the mornings",
-    home: "Tamara and Carmen's house:Tamara's bedroom",
-    workplace: "Hobbs Cafe:dining area",
+    home: "Tamara Taylor and Carmen Ortiz's house:Tamara Taylor's room",
+    workplace: "Hobbs Cafe:cafe:cafe customer seating",
     color: "#e056c9",
     wakeHour: 7,
   },
@@ -299,8 +299,8 @@ export const PERSONAS: Persona[] = [
       "Carmen Ortiz is working at the market and organizing a neighborhood book club",
     lifestyle:
       "Carmen Ortiz goes to bed around 10:30pm, wakes up around 6:30am, and works at the market during the day",
-    home: "Tamara and Carmen's house:Carmen's bedroom",
-    workplace: "The Willows Market and Pharmacy:grocery aisles",
+    home: "Tamara Taylor and Carmen Ortiz's house:Carmen Ortiz's room",
+    workplace: "The Willows Market and Pharmacy:store:behind the grocery counter",
     color: "#56c9e0",
     wakeHour: 6.5,
   },
@@ -314,8 +314,8 @@ export const PERSONAS: Persona[] = [
       "Latoya Williams is shooting a photo series around town for her upcoming exhibition",
     lifestyle:
       "Latoya Williams goes to bed around midnight, wakes up around 8am, and roams the town with her camera",
-    home: "The artist's co-living space:Latoya Williams's room",
-    workplace: "Johnson Park:pond",
+    home: "artist's co-living space:Latoya Williams's room",
+    workplace: "Johnson Park:park:park garden",
     color: "#e0567a",
     wakeHour: 8,
   },
@@ -329,8 +329,8 @@ export const PERSONAS: Persona[] = [
       "Rajiv Patel is working on a large landscape painting and quietly writing poems about his housemates",
     lifestyle:
       "Rajiv Patel goes to bed around 11pm, wakes up around 7:30am, and paints in the studio most days",
-    home: "The artist's co-living space:Rajiv Patel's room",
-    workplace: "The artist's co-living space:studio",
+    home: "artist's co-living space:Rajiv Patel's room",
+    workplace: "artist's co-living space:common room",
     color: "#56e0b8",
     wakeHour: 7.5,
   },
@@ -344,8 +344,8 @@ export const PERSONAS: Persona[] = [
       "Abigail Chen is finishing a freelance animation contract and prototyping a generative art piece",
     lifestyle:
       "Abigail Chen goes to bed around 1am, wakes up around 9am, and works on her tablet wherever there is coffee",
-    home: "The artist's co-living space:Abigail Chen's room",
-    workplace: "Hobbs Cafe:dining area",
+    home: "artist's co-living space:Abigail Chen's room",
+    workplace: "Hobbs Cafe:cafe:cafe customer seating",
     color: "#b856e0",
     wakeHour: 9,
   },
@@ -359,7 +359,7 @@ export const PERSONAS: Persona[] = [
       "Francisco Lopez is chasing a story about the local mayoral election and interviewing residents",
     lifestyle:
       "Francisco Lopez goes to bed around midnight, wakes up around 8:30am, and wanders town looking for stories",
-    home: "The artist's co-living space:Francisco Lopez's room",
+    home: "artist's co-living space:Francisco Lopez's room",
     color: "#e0b856",
     wakeHour: 8.5,
   },
@@ -373,8 +373,8 @@ export const PERSONAS: Persona[] = [
       "Hailey Johnson is revising the middle chapters of her novel and recruiting people for her writing circle",
     lifestyle:
       "Hailey Johnson goes to bed around 11:30pm, wakes up around 7:30am, and writes in long morning sessions",
-    home: "The artist's co-living space:Hailey Johnson's room",
-    workplace: "The Rose and Crown Pub:seating area",
+    home: "artist's co-living space:Hailey Johnson's room",
+    workplace: "The Rose and Crown Pub:pub:bar customer seating",
     color: "#7ae056",
     wakeHour: 7.5,
   },

@@ -17,6 +17,8 @@ export interface SubAreaDef {
   /** Draw interior walls around this sub-area (needs a door). */
   walls?: boolean;
   door?: { x: number; y: number };
+  /** Known-walkable tile to navigate to (for non-rectangular areas). */
+  target?: { x: number; y: number } | null;
   objects?: ObjectDef[];
 }
 
@@ -25,9 +27,24 @@ export interface AreaDef {
   kind: "building" | "outdoor";
   rect: Rect;
   door?: { x: number; y: number };
+  target?: { x: number; y: number } | null;
   subareas?: SubAreaDef[];
   objects?: ObjectDef[];
   color: string;
+}
+
+/**
+ * Optional per-tile layers for maps converted from tile mazes (e.g.
+ * the original Ville from Park et al. 2023). When present they take
+ * precedence over rect-painting in World.build. `collision` and
+ * `kinds` are width*height character strings; the index arrays map
+ * each tile to an area / flattened-subarea index (-1 = none).
+ */
+export interface TileLayers {
+  collision: string;
+  kinds: string;
+  areaIdx: number[];
+  subIdx: number[];
 }
 
 export interface MapDef {
@@ -35,6 +52,7 @@ export interface MapDef {
   width: number;
   height: number;
   areas: AreaDef[];
+  tiles?: TileLayers;
 }
 
 export interface WorldObject {
@@ -50,7 +68,7 @@ export interface Tile {
   walkable: boolean;
   area: string | null;
   subarea: string | null;
-  kind: "ground" | "wall" | "floor" | "door" | "water" | "tree";
+  kind: "ground" | "wall" | "floor" | "door" | "water" | "tree" | "garden";
 }
 
 function inRect(r: Rect, x: number, y: number): boolean {
@@ -90,6 +108,10 @@ export class World {
   }
 
   private build(): void {
+    if (this.def.tiles) {
+      this.buildFromTiles(this.def.tiles);
+      return;
+    }
     for (const area of this.def.areas) {
       for (let y = area.rect.y; y < area.rect.y + area.rect.h; y++) {
         for (let x = area.rect.x; x < area.rect.x + area.rect.w; x++) {
@@ -142,7 +164,49 @@ export class World {
     }
   }
 
-  private addObject(def: ObjectDef, parentPath: string): void {
+  private buildFromTiles(layers: TileLayers): void {
+    const KIND: Record<string, Tile["kind"]> = {
+      g: "ground",
+      f: "floor",
+      w: "wall",
+      t: "tree",
+      G: "garden",
+    };
+    // Flat subarea list in the same construction order the converter
+    // used: areas in order, each area's subareas in order.
+    const flatSubs: Array<{ area: string; sub: string }> = [];
+    for (const area of this.def.areas) {
+      for (const sub of area.subareas ?? []) {
+        flatSubs.push({ area: area.name, sub: sub.name });
+      }
+    }
+    for (let i = 0; i < this.width * this.height; i++) {
+      const t = this.tiles[i];
+      t.walkable = layers.collision[i] === "0";
+      t.kind = KIND[layers.kinds[i]] ?? "ground";
+      const ai = layers.areaIdx[i];
+      t.area = ai >= 0 ? this.def.areas[ai].name : null;
+      const si = layers.subIdx[i];
+      t.subarea = si >= 0 ? flatSubs[si].sub : null;
+    }
+    for (const area of this.def.areas) {
+      for (const sub of area.subareas ?? []) {
+        for (const obj of sub.objects ?? []) {
+          // Collision layer already encodes furniture walkability.
+          this.addObject(obj, `${area.name}:${sub.name}`, false);
+        }
+      }
+      for (const obj of area.objects ?? []) {
+        this.addObject(obj, area.name, false);
+      }
+    }
+  }
+
+  private addObject(
+    def: ObjectDef,
+    parentPath: string,
+    blockTile = true,
+  ): void {
     const obj: WorldObject = {
       name: def.name,
       path: `${parentPath}:${def.name}`,
@@ -152,7 +216,7 @@ export class World {
     };
     this.objects.push(obj);
     this.objectByPath.set(obj.path, obj);
-    this.tile(def.x, def.y).walkable = false;
+    if (blockTile) this.tile(def.x, def.y).walkable = false;
   }
 
   isWalkable(x: number, y: number): boolean {
@@ -235,9 +299,11 @@ export class World {
           );
           if (object) return this.nearestWalkable(object.x, object.y);
         }
+        if (sub.target) return this.nearestWalkable(sub.target.x, sub.target.y);
         return this.centerWalkable(sub.rect);
       }
     }
+    if (area.target) return this.nearestWalkable(area.target.x, area.target.y);
     return this.centerWalkable(area.rect);
   }
 
