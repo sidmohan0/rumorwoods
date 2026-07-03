@@ -1,6 +1,10 @@
 /** Shared IndexedDB handle: sessions + custom character roster. */
 
-const DB_NAME = "rumorwoods";
+// Named per major variant: IndexedDB is shared across the whole
+// origin, and the v1 build (deployed at the site root) opens
+// "rumorwoods" at schema version 1 — if this build upgraded that same
+// database, v1 would throw VersionError on its next open.
+const DB_NAME = "rumorwoods-v2";
 const DB_VERSION = 2;
 
 export const SESSIONS_STORE = "sessions";

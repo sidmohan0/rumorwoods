@@ -1,13 +1,14 @@
 name: Deploy to GitHub Pages
 
-# Deploys by pushing the build to the gh-pages branch (Pages "deploy
-# from a branch" mode). The actions/deploy-pages artifact path failed
-# repeatedly with an opaque backend "deployment_failed" for this site,
-# so we use the classic branch-based path instead.
+# Builds two variants onto one Pages site:
+#   site root  <- main (v1, the stable checkpoint lineage)
+#   site /v2/  <- v2   (experimental spin-off)
+# Vite's relative base ("./") makes both builds subpath-safe. Each
+# build gets VARIANT so the in-app version switcher links correctly.
 
 on:
   push:
-    branches: [main]
+    branches: [main, v2]
   workflow_dispatch:
 
 permissions:
@@ -23,23 +24,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: stable
+      - uses: actions/checkout@v4
+        with:
+          ref: v2
+          path: experimental
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: stable/package-lock.json
       - run: npm ci
-      - run: npm run build
+        working-directory: stable
+      - run: VARIANT=v1 npm run build
+        working-directory: stable
+      - run: npm ci
+        working-directory: experimental
+      - run: VARIANT=v2 npm run build
+        working-directory: experimental
+      - name: Assemble site
+        run: |
+          mkdir -p site/v2
+          cp -R stable/dist/. site/
+          cp -R experimental/dist/. site/v2/
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: dist
+          publish_dir: site
           force_orphan: true
       # GitHub Pages' deployment backend fails intermittently with an
-      # empty-description error (~50% of deploys for this site), on
-      # identical content and config that succeed on retry. Poll the
-      # build the gh-pages push triggered; if it errors or wedges,
-      # request fresh builds until one lands (every observed failure
-      # has yielded within 1-3 retries).
+      # empty-description error on identical content that succeeds on
+      # retry. Poll the build the gh-pages push triggered; if it errors
+      # or wedges, request fresh builds until one lands.
       - name: Ensure Pages build lands (retry backend flakes)
         env:
           GH_TOKEN: ${{ github.token }}

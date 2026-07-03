@@ -12,6 +12,7 @@ function commitHash(): string {
 export default defineConfig({
   define: {
     __COMMIT_HASH__: JSON.stringify(commitHash()),
+    __VARIANT__: JSON.stringify(process.env.VARIANT ?? "dev"),
   },
   // Relative base so the build works at any mount path (e.g. GitHub
   // Pages project sites served under /<repo>/).

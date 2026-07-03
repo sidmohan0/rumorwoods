@@ -140,6 +140,61 @@ body,
   color: #e8e4d8;
 }
 
+#scenario-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0 4px;
+}
+
+.scenario-card {
+  text-align: left;
+  background: #1c2419;
+  color: #e8e4d8;
+  border: 1px solid #3a4a2f;
+  border-radius: 6px;
+  padding: 10px 14px;
+  cursor: pointer;
+  min-width: 240px;
+  max-width: 340px;
+}
+
+.scenario-card:hover {
+  border-color: #5a7a48;
+}
+
+.scenario-card.active {
+  border-color: #9fd77a;
+  background: #26331d;
+}
+
+.scenario-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.scenario-blurb {
+  font-size: 12px;
+  color: #a8b09a;
+  margin: 3px 0;
+}
+
+.scenario-facts {
+  font-size: 11px;
+  color: #7d8a6d;
+}
+
+#variant-link {
+  margin-left: 10px;
+  font-size: 11px;
+  color: #9fb77a;
+  text-decoration: none;
+}
+
+#variant-link:hover {
+  text-decoration: underline;
+}
+
 #settings-columns {
   display: grid;
   grid-template-columns: minmax(280px, 1fr) minmax(250px, 0.9fr) minmax(340px, 1.25fr);

@@ -8,7 +8,7 @@ import {
 } from "./llm/llm";
 import { embed } from "./llm/embeddings";
 import { World } from "./world/world";
-import { scenarioFromQuery } from "./data/scenarios";
+import { SCENARIOS, scenarioFromQuery } from "./data/scenarios";
 import { Engine } from "./sim/engine";
 import { runGameDay, SeedStats } from "./sim/benchmark";
 import {
@@ -37,6 +37,20 @@ const llmStatusEl = document.getElementById("llm-status")!;
 
 commitLinkEl.textContent = __COMMIT_HASH__;
 commitLinkEl.href = `https://github.com/sidmohan0/rumorwoods/commit/${__COMMIT_HASH__}`;
+
+// Version switcher between the stable root deployment and /v2/.
+const variantLinkEl = document.getElementById("variant-link") as HTMLAnchorElement;
+if (__VARIANT__ === "v2") {
+  variantLinkEl.textContent = "v2 · experimental — switch to stable";
+  variantLinkEl.href = "../";
+} else if (__VARIANT__ === "v1") {
+  variantLinkEl.textContent = "v1 · stable — try v2 (experimental)";
+  variantLinkEl.href = "./v2/";
+} else {
+  variantLinkEl.textContent = "dev";
+  variantLinkEl.removeAttribute("href");
+}
+
 const logEl = document.getElementById("log")!;
 const overlayEl = document.getElementById("loading-overlay")!;
 const progressEl = document.getElementById("load-progress")!;
@@ -68,6 +82,33 @@ for (const modelId of WEBLLM_QWEN_MODELS) {
 }
 
 const scenario = scenarioFromQuery(location.search);
+
+// Scenario picker: cards on the settings screen; switching reloads
+// with ?map=<id> (the param remains usable as a deep link).
+const scenarioPickerEl = document.getElementById("scenario-picker")!;
+for (const s of Object.values(SCENARIOS)) {
+  const card = document.createElement("button");
+  card.type = "button";
+  card.className = "scenario-card" + (s.id === scenario.id ? " active" : "");
+  const title = document.createElement("div");
+  title.className = "scenario-title";
+  title.textContent = s.title;
+  const blurb = document.createElement("div");
+  blurb.className = "scenario-blurb";
+  blurb.textContent = s.blurb;
+  const facts = document.createElement("div");
+  facts.className = "scenario-facts";
+  facts.textContent = `${s.personas.length} residents · ${s.map.width}×${s.map.height}`;
+  card.append(title, blurb, facts);
+  card.addEventListener("click", () => {
+    if (s.id === scenario.id) return;
+    const params = new URLSearchParams(location.search);
+    params.set("map", s.id);
+    location.search = params.toString();
+  });
+  scenarioPickerEl.appendChild(card);
+}
+
 const world = new World(scenario.map);
 const llm = new LLMQueue(placeholderBackend(), 1);
 const engine = new Engine(world, llm, scenario.personas);

@@ -13,6 +13,7 @@ import { HONEYWOOD_PERSONAS } from "./personas-honeywood";
 export interface Scenario {
   id: string;
   title: string;
+  blurb: string;
   map: MapDef;
   personas: Persona[];
 }
@@ -20,13 +21,15 @@ export interface Scenario {
 export const SCENARIOS: Record<string, Scenario> = {
   ville: {
     id: "ville",
-    title: "the Ville (Park et al., 2023)",
+    title: "the Ville",
+    blurb: "The original Smallville — 25 residents on the paper's exact map",
     map: villeMapJson as unknown as MapDef,
     personas: PERSONAS,
   },
   honeywood: {
     id: "honeywood",
-    title: "Honeywood (Tiled pipeline demo)",
+    title: "Honeywood",
+    blurb: "A hamlet of 3 — tavern gossip travels fast (Tiled pipeline demo)",
     map: honeywoodMapJson as unknown as MapDef,
     personas: HONEYWOOD_PERSONAS,
   },
