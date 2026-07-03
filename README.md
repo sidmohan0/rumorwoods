@@ -95,6 +95,23 @@ MLC/HuggingFace CDNs by the visitor's browser, so the site itself stays tiny.
 The "local server" backend still works from the deployed HTTPS page because
 browsers exempt `http://localhost` from mixed-content blocking.
 
+## Measuring the sim (v2)
+
+The v2 branch is turning Rumorwoods from a faithful demo into an open
+instrument for evaluating generative-agent architectures — see
+[docs/V2-ROADMAP.md](docs/V2-ROADMAP.md). What's live so far:
+
+- **Metrics panel** (top bar): the paper's §6 results, automated and
+  recomputed live from agent state. Information-diffusion curves per
+  tracked topic (who first held a memory of Isabella's Valentine's
+  party, when, and whether it arrived via conversation — plus custom
+  keyword topics), and the social network (distinct conversations,
+  unique pairs, density, per-agent counts). One-click JSON export.
+- **Session forking**: copy any saved session as a new branch with
+  lineage metadata, change one thing (a persona field, a removed
+  resident), and run the counterfactual — "what if Isabella never
+  planned the party?"
+
 ## Benchmarking
 
 Two harnesses share the same measurement core (`src/sim/benchmark.ts`) and

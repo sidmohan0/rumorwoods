@@ -20,6 +20,8 @@ export interface SessionRecord {
   simTime: number;
   /** Scenario (map) the session belongs to; absent in older records (= ville). */
   scenario?: string;
+  /** Lineage when this record was created with forkSession. */
+  forkedFrom?: { session: string; simTime: number };
   /** Roster at save time; absent in records saved before rosters existed. */
   personas?: Persona[];
   agents: AgentState[];
@@ -30,6 +32,7 @@ export interface SessionSummary {
   name: string;
   savedAt: number;
   simTime: number;
+  forkedFrom?: { session: string; simTime: number };
 }
 
 export function captureSession(
@@ -65,7 +68,12 @@ export async function listSessions(): Promise<SessionSummary[]> {
   db.close();
   const records = (req.result ?? []) as SessionRecord[];
   return records
-    .map(({ name, savedAt, simTime }) => ({ name, savedAt, simTime }))
+    .map(({ name, savedAt, simTime, forkedFrom }) => ({
+      name,
+      savedAt,
+      simTime,
+      forkedFrom,
+    }))
     .sort((a, b) => b.savedAt - a.savedAt);
 }
 
@@ -76,6 +84,28 @@ export async function loadSession(name: string): Promise<SessionRecord | null> {
   await txDone(tx);
   db.close();
   return (req.result as SessionRecord | undefined) ?? null;
+}
+
+/**
+ * Copy a saved session under a new name, stamped with its lineage.
+ * Load the fork, change one thing, and run it forward: a counterfactual
+ * branch of the same town ("what if Isabella never planned the party?").
+ * Returns the fork, or null if the source does not exist.
+ */
+export async function forkSession(
+  sourceName: string,
+  newName: string,
+): Promise<SessionRecord | null> {
+  const source = await loadSession(sourceName);
+  if (!source) return null;
+  const fork: SessionRecord = {
+    ...structuredClone(source),
+    name: newName,
+    savedAt: Date.now(),
+    forkedFrom: { session: sourceName, simTime: source.simTime },
+  };
+  await saveSession(fork);
+  return fork;
 }
 
 export async function deleteSession(name: string): Promise<void> {

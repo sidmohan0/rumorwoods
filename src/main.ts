@@ -15,6 +15,7 @@ import {
   applySession,
   captureSession,
   deleteSession,
+  forkSession,
   listSessions,
   loadSession,
   saveSession,
@@ -23,6 +24,7 @@ import {
 import { checkServer } from "./llm/server-check";
 import { Renderer } from "./ui/renderer";
 import { Inspector } from "./ui/inspector";
+import { MetricsPanel } from "./ui/metrics-panel";
 import { initCharacterEditor } from "./ui/character-editor";
 import { formatTime } from "./core/prompts";
 
@@ -118,6 +120,14 @@ const inspector = new Inspector(document.getElementById("inspector")!);
 renderer.onSelect = (agent) => inspector.select(agent);
 inspector.getTime = () => engine.time;
 
+const metricsPanel = new MetricsPanel({
+  overlay: document.getElementById("metrics-overlay")!,
+  engine,
+  scenarioId: scenario.id,
+  topics: scenario.trackedTopics,
+  log: logLine,
+});
+
 if (import.meta.env.DEV) {
   (window as unknown as Record<string, unknown>).__rw = {
     engine,
@@ -134,6 +144,7 @@ llm.onStats = (active, queued, total) => {
 engine.onTick = () => {
   clockEl.textContent = formatTime(engine.time);
   inspector.render();
+  metricsPanel.onTick();
 };
 
 engine.onTickProgress = (done, total) => {
@@ -222,21 +233,47 @@ async function renderSessions(): Promise<void> {
     name.textContent = session.name;
     const sub = document.createElement("div");
     sub.className = "session-sub";
+    const lineage = session.forkedFrom
+      ? ` · forked from "${session.forkedFrom.session}" @ ${formatTime(
+          session.forkedFrom.simTime,
+        )}`
+      : "";
     sub.textContent = `sim ${formatTime(session.simTime)} · saved ${new Date(
       session.savedAt,
-    ).toLocaleString()}`;
+    ).toLocaleString()}${lineage}`;
     meta.append(name, sub);
     const loadBtn = document.createElement("button");
     loadBtn.textContent = "Load";
     loadBtn.addEventListener("click", () => void handleSessionLoad(session.name));
+    const forkBtn = document.createElement("button");
+    forkBtn.textContent = "Fork";
+    forkBtn.title =
+      "Copy this session as a new branch — load the fork, change one thing, and compare outcomes";
+    forkBtn.addEventListener("click", () => void handleSessionFork(session.name));
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "danger";
     deleteBtn.textContent = "Delete";
     deleteBtn.addEventListener("click", () =>
       void deleteSession(session.name).then(renderSessions),
     );
-    row.append(meta, loadBtn, deleteBtn);
+    row.append(meta, loadBtn, forkBtn, deleteBtn);
     sessionListEl.appendChild(row);
+  }
+}
+
+async function handleSessionFork(name: string): Promise<void> {
+  const newName = prompt("Fork session as:", `${name} (fork)`);
+  if (!newName || newName.trim() === name) return;
+  try {
+    const fork = await forkSession(name, newName.trim());
+    if (fork) {
+      logLine(
+        `[session] forked "${name}" → "${fork.name}" at ${formatTime(fork.simTime)}`,
+      );
+    }
+    await renderSessions();
+  } catch (err) {
+    logLine(`[session] fork failed: ${String(err)}`);
   }
 }
 
@@ -476,9 +513,18 @@ function closeSettings(): void {
 
 btnCloseSettings.addEventListener("click", closeSettings);
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && overlayEl.style.display !== "none") {
+  if (e.key !== "Escape") return;
+  if (metricsPanel.isOpen) {
+    metricsPanel.close();
+  } else if (overlayEl.style.display !== "none") {
     closeSettings();
   }
+});
+
+const btnMetrics = document.getElementById("btn-metrics") as HTMLButtonElement;
+btnMetrics.addEventListener("click", () => {
+  if (metricsPanel.isOpen) metricsPanel.close();
+  else metricsPanel.open();
 });
 
 btnSettings.addEventListener("click", () => {

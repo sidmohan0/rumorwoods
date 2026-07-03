@@ -1,5 +1,6 @@
 import { MapDef } from "../world/world";
 import { Persona } from "../core/types";
+import { TrackedTopic } from "../sim/metrics";
 import villeMapJson from "./ville-map.json";
 import honeywoodMapJson from "./honeywood-map.json";
 import { PERSONAS } from "./personas";
@@ -16,6 +17,8 @@ export interface Scenario {
   blurb: string;
   map: MapDef;
   personas: Persona[];
+  /** Seeded facts whose spread the Metrics panel tracks by default. */
+  trackedTopics: TrackedTopic[];
 }
 
 export const SCENARIOS: Record<string, Scenario> = {
@@ -25,6 +28,18 @@ export const SCENARIOS: Record<string, Scenario> = {
     blurb: "The original Smallville — 25 residents on the paper's exact map",
     map: villeMapJson as unknown as MapDef,
     personas: PERSONAS,
+    trackedTopics: [
+      {
+        id: "party",
+        label: "Isabella's Valentine's party",
+        keywords: ["valentine"],
+      },
+      {
+        id: "election",
+        label: "Sam's run for mayor",
+        keywords: ["mayor"],
+      },
+    ],
   },
   honeywood: {
     id: "honeywood",
@@ -32,6 +47,13 @@ export const SCENARIOS: Record<string, Scenario> = {
     blurb: "A hamlet of 3 — tavern gossip travels fast (Tiled pipeline demo)",
     map: honeywoodMapJson as unknown as MapDef,
     personas: HONEYWOOD_PERSONAS,
+    trackedTopics: [
+      {
+        id: "feast",
+        label: "Marta's harvest feast",
+        keywords: ["harvest feast", "feast"],
+      },
+    ],
   },
 };
 
