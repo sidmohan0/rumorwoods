@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rumorwoods — Generative Agents in the Browser</title>
+    <script type="module" crossorigin src="./assets/index-yYck4z7j.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DZvyCm7W.css">
+  </head>
+  <body>
+    <div id="app">
+      <header id="topbar">
+        <div id="title">
+          <b>Rumorwoods</b>
+          <span class="subtitle">Generative Agents: Interactive Simulacra of Human Behavior — fully in-browser</span>
+          <a id="commit-link" target="_blank" rel="noopener"></a>
+          <a id="variant-link"></a>
+        </div>
+        <div id="clock">—</div>
+        <div id="tick-status"></div>
+        <div id="controls">
+          <button id="btn-start" disabled>Start</button>
+          <button id="btn-pause" disabled>Pause</button>
+          <button id="btn-save" disabled>Save</button>
+          <button id="btn-metrics">Metrics</button>
+          <button id="btn-settings">Settings</button>
+        </div>
+        <div id="llm-status">model not loaded</div>
+      </header>
+      <main id="layout">
+        <div id="map-container">
+          <canvas id="map"></canvas>
+        </div>
+        <aside id="sidebar">
+          <div id="inspector"></div>
+          <div id="log-panel">
+            <div class="panel-title">Town log</div>
+            <div id="log"></div>
+          </div>
+        </aside>
+      </main>
+      <div id="metrics-overlay" hidden></div>
+      <div id="loading-overlay">
+        <div id="loading-card">
+          <button id="btn-close-settings" title="Close settings" aria-label="Close settings">&times;</button>
+          <h2>Rumorwoods</h2>
+          <p>
+            A faithful, fully in-browser reimplementation of
+            <i>Generative Agents: Interactive Simulacra of Human Behavior</i>
+            (Park et&nbsp;al., 2023). Twenty-five agents live out their days in
+            Smallville — remembering, reflecting, planning, and spreading the
+            word about Isabella's Valentine's Day party.
+          </p>
+          <div id="scenario-picker"></div>
+          <div id="settings-columns">
+            <section>
+              <div class="panel-title">Model backend</div>
+              <div id="backend-choice">
+                <label>
+                  <input type="radio" name="backend" value="webllm" checked />
+                  WebLLM (WebGPU, in-browser)
+                </label>
+                <select id="webllm-model"></select>
+                <label>
+                  <input type="radio" name="backend" value="local" />
+                  Local LLM server (llama.cpp, Ollama, LM Studio, vLLM…)
+                </label>
+                <div id="local-config">
+                  <div id="server-presets">
+                    <button type="button" class="preset" data-url="http://localhost:8080">llama.cpp :8080</button>
+                    <button type="button" class="preset" data-url="http://localhost:11434">Ollama :11434</button>
+                    <button type="button" class="preset" data-url="http://localhost:1234">LM Studio :1234</button>
+                    <button type="button" class="preset" data-url="http://localhost:8000">vLLM :8000</button>
+                  </div>
+                  <div id="server-url-row">
+                    <input id="local-url" type="text" value="http://localhost:8080" placeholder="Base URL (e.g. http://localhost:8080)" />
+                    <button type="button" id="btn-check">Check</button>
+                  </div>
+                  <div id="server-status"></div>
+                  <select id="local-model-select" hidden></select>
+                  <input id="local-model" type="text" placeholder="Model name (leave empty for server default)" />
+                </div>
+              </div>
+            </section>
+            <section>
+              <div class="panel-title">Saved sessions</div>
+              <div id="session-list"><span class="hint">No saved sessions yet. Use Save in the top bar while a sim is running.</span></div>
+            </section>
+            <section id="characters-section">
+              <div class="panel-title">Characters</div>
+              <div id="character-editor"></div>
+            </section>
+          </div>
+          <button id="btn-load">Load model &amp; begin</button>
+          <div id="load-progress"></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
