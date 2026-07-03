@@ -57,11 +57,29 @@ body,
 #llm-status {
   margin-left: auto;
   font-size: 12px;
+  line-height: 1.35;
   color: #a8b09a;
-  max-width: 340px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 420px;
+  text-align: right;
+}
+
+#tick-status {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #8fa07e;
+  min-width: 110px;
+}
+
+#commit-link {
+  margin-left: 10px;
+  font-size: 11px;
+  font-family: monospace;
+  color: #7d8a6d;
+  text-decoration: none;
+}
+
+#commit-link:hover {
+  text-decoration: underline;
 }
 
 #layout {

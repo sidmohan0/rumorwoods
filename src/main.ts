@@ -21,7 +21,12 @@ const BENCH = new URLSearchParams(location.search).has("bench");
 
 const canvas = document.getElementById("map") as HTMLCanvasElement;
 const clockEl = document.getElementById("clock")!;
+const tickStatusEl = document.getElementById("tick-status")!;
+const commitLinkEl = document.getElementById("commit-link") as HTMLAnchorElement;
 const llmStatusEl = document.getElementById("llm-status")!;
+
+commitLinkEl.textContent = __COMMIT_HASH__;
+commitLinkEl.href = `https://github.com/sidmohan0/rumorwoods/commit/${__COMMIT_HASH__}`;
 const logEl = document.getElementById("log")!;
 const overlayEl = document.getElementById("loading-overlay")!;
 const progressEl = document.getElementById("load-progress")!;
@@ -58,6 +63,19 @@ engine.onTick = () => {
   clockEl.textContent = formatTime(engine.time);
   inspector.render();
 };
+
+engine.onTickProgress = (done, total) => {
+  tickStatusEl.textContent =
+    done < total ? `thinking ${done}/${total} agents` : "";
+};
+
+/** Reflect engine state in the Start/Pause buttons. */
+function syncControls(): void {
+  const running = engine.state === "running";
+  btnStart.disabled = running;
+  btnStart.textContent = running ? "Running" : "Start";
+  btnPause.disabled = !running;
+}
 
 function logLine(entry: string): void {
   const div = document.createElement("div");
@@ -141,9 +159,8 @@ btnLoad.addEventListener("click", () => {
       if (BENCH) {
         void runBenchmark(seedStats);
       } else {
-        btnStart.disabled = false;
-        btnPause.disabled = false;
         engine.start();
+        syncControls();
       }
     } catch (err) {
       progressEl.textContent = String(err);
@@ -195,10 +212,17 @@ async function runBenchmark(seed?: SeedStats): Promise<void> {
   }
 }
 
-btnStart.addEventListener("click", () => engine.start());
-btnPause.addEventListener("click", () => engine.pause());
+btnStart.addEventListener("click", () => {
+  engine.start();
+  syncControls();
+});
+btnPause.addEventListener("click", () => {
+  engine.pause();
+  syncControls();
+});
 btnSettings.addEventListener("click", () => {
   engine.pause();
+  syncControls();
   overlayEl.style.display = "flex";
   btnLoad.disabled = false;
 });

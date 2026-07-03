@@ -20,6 +20,8 @@ export class Engine {
   state: EngineState = "idle";
   onTick?: () => void;
   onLog?: (entry: string) => void;
+  /** Fires as each agent finishes cognition within the current tick. */
+  onTickProgress?: (done: number, total: number) => void;
   private stepping = false;
 
   constructor(world: World, llm: LLMQueue, personas: Persona[]) {
@@ -64,12 +66,17 @@ export class Engine {
     this.stepping = true;
     try {
       // Cognition for all agents (LLM calls are serialized by the queue).
+      let stepped = 0;
+      this.onTickProgress?.(0, this.agents.length);
       await Promise.all(
         this.agents.map(async (agent) => {
           try {
             await agent.step(this.time, this.agents);
           } catch (err) {
             this.onLog?.(`[error] ${agent.name}: ${String(err)}`);
+          } finally {
+            stepped++;
+            this.onTickProgress?.(stepped, this.agents.length);
           }
         }),
       );
