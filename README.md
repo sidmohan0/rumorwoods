@@ -1,5 +1,7 @@
 # Rumorwoods
 
+**[Live demo](https://sidmohan0.github.io/rumorwoods/)** · **[v1.0.0 checkpoint](https://github.com/sidmohan0/rumorwoods/releases/tag/v1.0.0)** — the stable, feature-complete reimplementation. Development beyond this point may diverge substantially.
+
 A faithful, **fully in-browser** reimplementation of
 [*Generative Agents: Interactive Simulacra of Human Behavior*](https://arxiv.org/abs/2304.03442)
 (Park et al., UIST '23).
