@@ -24,11 +24,37 @@ export class Engine {
   onTickProgress?: (done: number, total: number) => void;
   private stepping = false;
 
+  private llm: LLMQueue;
+
   constructor(world: World, llm: LLMQueue, personas: Persona[]) {
     this.world = world;
+    this.llm = llm;
     for (const persona of personas) {
       this.agents.push(new Agent(persona, world, llm));
     }
+  }
+
+  /** Add a resident mid-flight (caller seeds memories if needed). */
+  addAgent(persona: Persona): Agent {
+    const agent = new Agent(persona, this.world, this.llm);
+    this.agents.push(agent);
+    return agent;
+  }
+
+  /** Remove a resident, cleanly detaching any active conversation. */
+  removeAgent(name: string): Agent | null {
+    const index = this.agents.findIndex((a) => a.name === name);
+    if (index < 0) return null;
+    const agent = this.agents[index];
+    const partner = agent.conversationPartner;
+    if (partner) {
+      partner.conversation = null;
+      partner.conversationPartner = null;
+    }
+    agent.conversation = null;
+    agent.conversationPartner = null;
+    this.agents.splice(index, 1);
+    return agent;
   }
 
   async seed(): Promise<void> {

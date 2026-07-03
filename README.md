@@ -19,6 +19,11 @@ real LLM**.
 - **Sessions**: save and resume simulations entirely in the browser
   (IndexedDB) — full agent memory streams with embeddings, plans, positions,
   conversations, and object states. Any backend can resume any session.
+- **Character editor**: edit any resident's traits, life story, "currently",
+  lifestyle, home/workplace (picked from real map locations), or add and
+  remove residents — live, from the settings screen. Custom rosters persist
+  in the browser and are embedded in session saves; field edits take effect
+  on the agent's next LLM call.
 - **Map**: the actual "the Ville" layout from the official repository — all 19 sectors,
   63 arenas, per-tile collision, and object placement are converted from its Apache-2.0
   tile-matrix data by `tools/build-ville-map.mjs` (source CSVs in `tools/ville-data/`).

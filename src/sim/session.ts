@@ -1,22 +1,25 @@
 import { Agent, AgentState } from "../core/agent";
+import { Persona } from "../core/types";
 import { Engine } from "./engine";
 import { World } from "../world/world";
+import { openDb, txDone, SESSIONS_STORE as STORE } from "./db";
+import { reconcileRoster } from "./roster";
 
 /**
  * Session persistence in IndexedDB. A session snapshot holds the sim
- * clock, every agent's mutable state (memory stream with embeddings —
- * IndexedDB structured-clones Float32Array natively), and world object
- * statuses. LLM backend choice is not part of a session; any backend
- * can resume any session.
+ * clock, the persona roster (so saves from customized towns restore
+ * correctly), every agent's mutable state (memory stream with
+ * embeddings — IndexedDB structured-clones Float32Array natively),
+ * and world object statuses. LLM backend choice is not part of a
+ * session; any backend can resume any session.
  */
-
-const DB_NAME = "rumorwoods";
-const STORE = "sessions";
 
 export interface SessionRecord {
   name: string;
   savedAt: number;
   simTime: number;
+  /** Roster at save time; absent in records saved before rosters existed. */
+  personas?: Persona[];
   agents: AgentState[];
   objects: Array<{ path: string; status: string }>;
 }
@@ -25,27 +28,6 @@ export interface SessionSummary {
   name: string;
   savedAt: number;
   simTime: number;
-}
-
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains(STORE)) {
-        req.result.createObjectStore(STORE, { keyPath: "name" });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function txDone(tx: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
-  });
 }
 
 export function captureSession(
@@ -57,6 +39,7 @@ export function captureSession(
     name,
     savedAt: Date.now(),
     simTime: engine.time,
+    personas: engine.agents.map((a) => structuredClone(a.persona)),
     agents: engine.agents.map((a) => a.serialize()),
     objects: world.objects.map((o) => ({ path: o.path, status: o.status })),
   };
@@ -106,6 +89,12 @@ export function applySession(
   world: World,
 ): void {
   engine.time = record.simTime;
+
+  // Align the roster with the one saved in the record, so sessions
+  // from customized towns restore their exact cast.
+  if (record.personas) {
+    reconcileRoster(engine, record.personas);
+  }
 
   const byName = new Map<string, Agent>(
     engine.agents.map((a) => [a.name, a]),

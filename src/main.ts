@@ -24,6 +24,7 @@ import {
 import { checkServer } from "./llm/server-check";
 import { Renderer } from "./ui/renderer";
 import { Inspector } from "./ui/inspector";
+import { initCharacterEditor } from "./ui/character-editor";
 import { formatTime } from "./core/prompts";
 
 /** ?bench=1 runs one game day and produces a downloadable report. */
@@ -240,6 +241,16 @@ btnSave.addEventListener("click", () => {
 });
 
 void renderSessions();
+
+initCharacterEditor({
+  container: document.getElementById("character-editor")!,
+  engine,
+  map: SMALLVILLE_MAP,
+  defaults: PERSONAS,
+  isSeeded: () => seeded,
+  now: () => engine.time,
+  log: logLine,
+});
 
 function logLine(entry: string): void {
   const div = document.createElement("div");
