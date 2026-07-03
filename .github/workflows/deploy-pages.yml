@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 concurrency:
   group: pages
@@ -33,3 +34,12 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: dist
           force_orphan: true
+      # GitHub's auto-triggered "pages build and deployment" run fails
+      # intermittently for this site with an opaque backend error, so
+      # explicitly request a build via the legacy API, which works.
+      - name: Trigger Pages build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 10
+          gh api -X POST "repos/${{ github.repository }}/pages/builds"
