@@ -45,6 +45,30 @@ ollama run qwen2.5:7b-instruct
 
 then select "Local llama.cpp / Ollama server" on the start screen.
 
+## Deployment
+
+The app is fully static. Pushes to `main` deploy to GitHub Pages via
+`.github/workflows/deploy-pages.yml`; model weights are fetched from the
+MLC/HuggingFace CDNs by the visitor's browser, so the site itself stays tiny.
+The "local server" backend still works from the deployed HTTPS page because
+browsers exempt `http://localhost` from mixed-content blocking.
+
+## Benchmarking
+
+Two harnesses share the same measurement core (`src/sim/benchmark.ts`) and
+report LLM calls, prompt/completion tokens, latency percentiles, and
+sim-to-real-time ratio for one full game day, next to the GPT-3.5-Turbo
+baseline measured for the original architecture (25.41M tokens per two game
+days — [Affordable Generative Agents](https://arxiv.org/abs/2402.02053)):
+
+```bash
+# Headless, against a local OpenAI-compatible server:
+npx tsx tools/benchmark.mts http://localhost:8080
+
+# In-browser (WebLLM or local server), with a downloadable JSON report:
+#   open the app with ?bench=1 and click "Load model & begin"
+```
+
 ## Architecture (paper section → module)
 
 | Paper component | Module |

@@ -3,7 +3,7 @@
  * spritesheet of 16px tiles with 1px spacing. Coordinates below are
  * (column, row) into that sheet. See public/tiles/LICENSE-kenney.txt.
  */
-export const SHEET_URL = "/tiles/roguelike.png";
+export const SHEET_URL = `${import.meta.env.BASE_URL}tiles/roguelike.png`;
 export const SPRITE = 16;
 const STRIDE = 17;
 
