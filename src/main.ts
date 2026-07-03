@@ -38,6 +38,20 @@ const llmStatusEl = document.getElementById("llm-status")!;
 
 commitLinkEl.textContent = __COMMIT_HASH__;
 commitLinkEl.href = `https://github.com/sidmohan0/rumorwoods/commit/${__COMMIT_HASH__}`;
+
+// Version switcher between the stable root deployment and /v2/.
+const variantLinkEl = document.getElementById("variant-link") as HTMLAnchorElement;
+if (__VARIANT__ === "v2") {
+  variantLinkEl.textContent = "v2 · experimental — switch to stable";
+  variantLinkEl.href = "../";
+} else if (__VARIANT__ === "v1") {
+  variantLinkEl.textContent = "v1 · stable — try v2 (experimental)";
+  variantLinkEl.href = "./v2/";
+} else {
+  variantLinkEl.textContent = "dev";
+  variantLinkEl.removeAttribute("href");
+}
+
 const logEl = document.getElementById("log")!;
 const overlayEl = document.getElementById("loading-overlay")!;
 const progressEl = document.getElementById("load-progress")!;

@@ -620,3 +620,14 @@ details summary {
 #interview-history {
   margin: 6px 0;
 }
+
+#variant-link {
+  margin-left: 10px;
+  font-size: 11px;
+  color: #9fb77a;
+  text-decoration: none;
+}
+
+#variant-link:hover {
+  text-decoration: underline;
+}
