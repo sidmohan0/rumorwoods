@@ -1,0 +1,13 @@
+Rumorwoods
+
+Map layout data ("the Ville": sector/arena/object tile matrices in
+tools/ville-data/, converted to src/data/ville-map.json) is derived from
+joonspk-research/generative_agents
+(https://github.com/joonspk-research/generative_agents),
+Copyright (c) 2023 Joon Sung Park, licensed under the Apache License 2.0
+(http://www.apache.org/licenses/LICENSE-2.0).
+
+Tile artwork (public/tiles/roguelike.png) is Kenney's "Roguelike/RPG pack"
+(https://kenney.nl/assets/roguelike-rpg-pack), Creative Commons Zero (CC0).
+The original project's commercial tile art (PixyMoon, LimeZu, pipoya) is
+not included in this repository.
