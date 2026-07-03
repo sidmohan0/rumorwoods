@@ -400,7 +400,27 @@ btnPause.addEventListener("click", () => {
   engine.pause();
   syncControls();
 });
+const btnCloseSettings = document.getElementById(
+  "btn-close-settings",
+) as HTMLButtonElement;
+let resumeAfterSettings = false;
+
+function closeSettings(): void {
+  overlayEl.style.display = "none";
+  if (resumeAfterSettings && modelLoaded) engine.start();
+  resumeAfterSettings = false;
+  syncControls();
+}
+
+btnCloseSettings.addEventListener("click", closeSettings);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && overlayEl.style.display !== "none") {
+    closeSettings();
+  }
+});
+
 btnSettings.addEventListener("click", () => {
+  resumeAfterSettings = engine.state === "running";
   engine.pause();
   syncControls();
   overlayEl.style.display = "flex";
