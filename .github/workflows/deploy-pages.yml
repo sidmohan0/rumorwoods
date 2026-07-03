@@ -34,12 +34,32 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: dist
           force_orphan: true
-      # GitHub's auto-triggered "pages build and deployment" run fails
-      # intermittently for this site with an opaque backend error, so
-      # explicitly request a build via the legacy API, which works.
-      - name: Trigger Pages build
+      # GitHub Pages' deployment backend fails intermittently with an
+      # empty-description error (~50% of deploys for this site), on
+      # identical content and config that succeed on retry. Poll the
+      # build the gh-pages push triggered; if it errors or wedges,
+      # request fresh builds until one lands (every observed failure
+      # has yielded within 1-3 retries).
+      - name: Ensure Pages build lands (retry backend flakes)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          sleep 10
-          gh api -X POST "repos/${{ github.repository }}/pages/builds"
+          set -e
+          for attempt in 1 2 3 4 5; do
+            echo "waiting for Pages build (attempt $attempt)…"
+            for i in $(seq 1 18); do
+              sleep 10
+              status=$(gh api "repos/${{ github.repository }}/pages/builds/latest" --jq '.status' || echo unknown)
+              if [ "$status" = "built" ]; then
+                echo "Pages build succeeded"
+                exit 0
+              fi
+              if [ "$status" = "errored" ]; then
+                break
+              fi
+            done
+            echo "build errored or wedged — requesting a fresh build"
+            gh api -X POST "repos/${{ github.repository }}/pages/builds" || true
+          done
+          echo "Pages build did not land after 5 attempts"
+          exit 1
