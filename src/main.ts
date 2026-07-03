@@ -8,8 +8,7 @@ import {
 } from "./llm/llm";
 import { embed } from "./llm/embeddings";
 import { World } from "./world/world";
-import { SMALLVILLE_MAP } from "./data/map";
-import { PERSONAS } from "./data/personas";
+import { scenarioFromQuery } from "./data/scenarios";
 import { Engine } from "./sim/engine";
 import { runGameDay, SeedStats } from "./sim/benchmark";
 import {
@@ -68,9 +67,10 @@ for (const modelId of WEBLLM_QWEN_MODELS) {
   modelSelect.appendChild(option);
 }
 
-const world = new World(SMALLVILLE_MAP);
+const scenario = scenarioFromQuery(location.search);
+const world = new World(scenario.map);
 const llm = new LLMQueue(placeholderBackend(), 1);
-const engine = new Engine(world, llm, PERSONAS);
+const engine = new Engine(world, llm, scenario.personas);
 const renderer = new Renderer(canvas, world, engine.agents);
 const inspector = new Inspector(document.getElementById("inspector")!);
 
@@ -202,6 +202,13 @@ async function renderSessions(): Promise<void> {
 async function handleSessionLoad(name: string): Promise<void> {
   const record = await loadSession(name);
   if (!record) return;
+  const recordScenario = record.scenario ?? "ville";
+  if (recordScenario !== scenario.id) {
+    progressEl.textContent =
+      `Session "${name}" belongs to the "${recordScenario}" map — ` +
+      `open the app with ?map=${recordScenario} to resume it.`;
+    return;
+  }
   if (modelLoaded) {
     engine.pause();
     applySession(record, engine, world);
@@ -228,7 +235,9 @@ btnSave.addEventListener("click", () => {
     const name = prompt("Save session as:", suggestion);
     if (name) {
       try {
-        await saveSession(captureSession(name.trim(), engine, world));
+        await saveSession(
+          captureSession(name.trim(), engine, world, scenario.id),
+        );
         logLine(`[session] saved "${name.trim()}"`);
         await renderSessions();
       } catch (err) {
@@ -245,8 +254,9 @@ void renderSessions();
 initCharacterEditor({
   container: document.getElementById("character-editor")!,
   engine,
-  map: SMALLVILLE_MAP,
-  defaults: PERSONAS,
+  scenarioId: scenario.id,
+  map: scenario.map,
+  defaults: scenario.personas,
   isSeeded: () => seeded,
   now: () => engine.time,
   log: logLine,

@@ -8,33 +8,39 @@ import { openDb, txDone, ROSTER_STORE } from "./db";
  * running engine via reconcileRoster.
  */
 
-const ROSTER_KEY = "custom";
+/** Rosters are stored per scenario (map) — see data/scenarios.ts. */
+function rosterKey(scenarioId: string): string {
+  return `custom:${scenarioId}`;
+}
 
-export async function loadRoster(): Promise<Persona[] | null> {
+export async function loadRoster(scenarioId: string): Promise<Persona[] | null> {
   const db = await openDb();
   const tx = db.transaction(ROSTER_STORE, "readonly");
-  const req = tx.objectStore(ROSTER_STORE).get(ROSTER_KEY);
+  const req = tx.objectStore(ROSTER_STORE).get(rosterKey(scenarioId));
   await txDone(tx);
   db.close();
   const record = req.result as { id: string; personas: Persona[] } | undefined;
   return record?.personas ?? null;
 }
 
-export async function saveRoster(personas: Persona[]): Promise<void> {
+export async function saveRoster(
+  scenarioId: string,
+  personas: Persona[],
+): Promise<void> {
   const db = await openDb();
   const tx = db.transaction(ROSTER_STORE, "readwrite");
   tx.objectStore(ROSTER_STORE).put({
-    id: ROSTER_KEY,
+    id: rosterKey(scenarioId),
     personas: structuredClone(personas),
   });
   await txDone(tx);
   db.close();
 }
 
-export async function clearRoster(): Promise<void> {
+export async function clearRoster(scenarioId: string): Promise<void> {
   const db = await openDb();
   const tx = db.transaction(ROSTER_STORE, "readwrite");
-  tx.objectStore(ROSTER_STORE).delete(ROSTER_KEY);
+  tx.objectStore(ROSTER_STORE).delete(rosterKey(scenarioId));
   await txDone(tx);
   db.close();
 }

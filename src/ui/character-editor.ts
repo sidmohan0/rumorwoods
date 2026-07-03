@@ -18,6 +18,7 @@ import {
 export interface CharacterEditorDeps {
   container: HTMLElement;
   engine: Engine;
+  scenarioId: string;
   map: MapDef;
   defaults: Persona[];
   isSeeded: () => boolean;
@@ -40,7 +41,7 @@ export function initCharacterEditor(deps: CharacterEditorDeps): void {
   formEl.hidden = true;
   container.append(listEl, formEl);
 
-  void loadRoster().then((saved) => {
+  void loadRoster(deps.scenarioId).then((saved) => {
     if (saved) {
       roster = saved;
       applyToEngine();
@@ -58,7 +59,7 @@ export function initCharacterEditor(deps: CharacterEditorDeps): void {
   }
 
   async function persistAndApply(): Promise<void> {
-    await saveRoster(roster);
+    await saveRoster(deps.scenarioId, roster);
     applyToEngine();
     renderList();
   }
@@ -117,6 +118,8 @@ export function initCharacterEditor(deps: CharacterEditorDeps): void {
     const addBtn = document.createElement("button");
     addBtn.textContent = "Add character";
     addBtn.addEventListener("click", () => {
+      const firstArea = map.areas[0];
+      const firstSub = firstArea?.subareas?.[0];
       const blank: Persona = {
         name: "",
         age: 30,
@@ -124,7 +127,7 @@ export function initCharacterEditor(deps: CharacterEditorDeps): void {
         learned: "",
         currently: "",
         lifestyle: "",
-        home: "artist's co-living space:common room",
+        home: firstSub ? `${firstArea.name}:${firstSub.name}` : firstArea?.name ?? "",
         workplace: undefined,
         color: randomColor(),
         wakeHour: 7,
@@ -132,14 +135,14 @@ export function initCharacterEditor(deps: CharacterEditorDeps): void {
       openForm(blank, true);
     });
     const resetBtn = document.createElement("button");
-    resetBtn.textContent = "Reset to original 25";
+    resetBtn.textContent = `Reset to the original ${defaults.length}`;
     resetBtn.addEventListener("click", () => {
       if (!confirm("Discard all character customizations?")) return;
       roster = defaults.map((p) => structuredClone(p));
-      void clearRoster().then(() => {
+      void clearRoster(deps.scenarioId).then(() => {
         applyToEngine();
         renderList();
-        deps.log("[characters] roster reset to the original 25");
+        deps.log(`[characters] roster reset to the original ${defaults.length}`);
       });
     });
     actions.append(addBtn, resetBtn);

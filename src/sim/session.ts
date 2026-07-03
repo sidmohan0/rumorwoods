@@ -18,6 +18,8 @@ export interface SessionRecord {
   name: string;
   savedAt: number;
   simTime: number;
+  /** Scenario (map) the session belongs to; absent in older records (= ville). */
+  scenario?: string;
   /** Roster at save time; absent in records saved before rosters existed. */
   personas?: Persona[];
   agents: AgentState[];
@@ -34,11 +36,13 @@ export function captureSession(
   name: string,
   engine: Engine,
   world: World,
+  scenarioId: string,
 ): SessionRecord {
   return {
     name,
     savedAt: Date.now(),
     simTime: engine.time,
+    scenario: scenarioId,
     personas: engine.agents.map((a) => structuredClone(a.persona)),
     agents: engine.agents.map((a) => a.serialize()),
     objects: world.objects.map((o) => ({ path: o.path, status: o.status })),
